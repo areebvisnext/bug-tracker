@@ -1,2 +1,6 @@
 fastapi
-pydantic
+pydantic[email]
+email-validator
+uvicorn
+python-dotenv
+supabase
