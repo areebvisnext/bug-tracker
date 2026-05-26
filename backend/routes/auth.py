@@ -2,9 +2,14 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from schemas.auth import SignupSchema, LoginSchema
+from schemas.auth import LoginSchema, SignupSchema, UserProfileResponse
 from services.auth_errors import raise_auth_http_exception
-from services.authService import login_user, logout_user, signup_user
+from services.authService import (
+    get_current_user_profile,
+    login_user,
+    logout_user,
+    signup_user,
+)
 from supabase_auth.errors import AuthApiError
 
 router = APIRouter()
@@ -16,6 +21,8 @@ def signup(data: SignupSchema):
 
     try:
         return signup_user(data)
+    except AuthApiError as e:
+        raise_auth_http_exception(e)
     except Exception as e:
         raise_auth_http_exception(e)
 
@@ -38,6 +45,16 @@ def login(data: LoginSchema):
         "refresh_token": response.session.refresh_token,
         "user": response.user.model_dump() if response.user else None,
     }
+
+
+@router.get("/me", response_model=UserProfileResponse)
+def get_me(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    try:
+        return get_current_user_profile(credentials.credentials)
+    except AuthApiError as e:
+        raise_auth_http_exception(e)
+    except Exception as e:
+        raise_auth_http_exception(e)
 
 
 @router.post("/logout")

@@ -12,6 +12,7 @@ _STATUS_BY_CODE = {
     "email_not_confirmed": 403,
     "weak_password": 400,
     "signup_disabled": 403,
+    "not_admin": 500,
 }
 
 
@@ -22,6 +23,14 @@ def raise_auth_http_exception(error: Exception) -> None:
             status = 429
         elif error.code in _STATUS_BY_CODE:
             status = _STATUS_BY_CODE[error.code]
-        raise HTTPException(status_code=status, detail=error.message) from error
+
+        detail = error.message
+        if error.code == "not_admin":
+            detail = (
+                "Server misconfiguration: admin auth operations require "
+                "SUPABASE_SERVICE_ROLE_KEY in the backend .env"
+            )
+
+        raise HTTPException(status_code=status, detail=detail) from error
 
     raise HTTPException(status_code=400, detail=str(error)) from error

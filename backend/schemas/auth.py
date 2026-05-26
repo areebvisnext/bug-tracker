@@ -13,3 +13,13 @@ class SignupSchema(BaseModel):
 class LoginSchema(BaseModel):
     email: EmailStr
     password: str
+
+
+class UserProfileResponse(BaseModel):
+    id: str
+    email: str
+    phone: str | None = None
+    full_name: str
+    role: str
+    username: str
+    avatar_url: str | None = None

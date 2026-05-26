@@ -24,6 +24,20 @@ export type LoginResponse = {
   user: Record<string, unknown> | null;
 };
 
+export type UserProfile = {
+  id: string;
+  email: string;
+  phone: string | null;
+  full_name: string;
+  role: string;
+  username: string;
+  avatar_url: string | null;
+};
+
+function authHeaders(accessToken: string): HeadersInit {
+  return { Authorization: `Bearer ${accessToken}` };
+}
+
 async function parseError(res: Response): Promise<string> {
   try {
     const data = await res.json();
@@ -59,10 +73,18 @@ export async function signupUser(
   return res.json();
 }
 
+export async function getCurrentUser(accessToken: string): Promise<UserProfile> {
+  const res = await fetch(`${API_BASE}/api/auth/me`, {
+    headers: authHeaders(accessToken),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
 export async function logoutUser(accessToken: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/auth/logout`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: authHeaders(accessToken),
   });
   if (!res.ok) throw new Error(await parseError(res));
 }
