@@ -9,6 +9,8 @@ from services.authService import (
     login_user,
     logout_user,
     signup_user,
+    get_qa_service,
+    get_devs_service,
 )
 from supabase_auth.errors import AuthApiError
 
@@ -49,6 +51,7 @@ def login(data: LoginSchema):
 
 @router.get("/me", response_model=UserProfileResponse)
 def get_me(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    print("TOKEN:", credentials.credentials[:20])
     try:
         return get_current_user_profile(credentials.credentials)
     except AuthApiError as e:
@@ -70,3 +73,15 @@ def logout(
         raise_auth_http_exception(e)
 
     return {"message": "Logged out successfully"}
+
+
+@router.get("/qa")
+def get_qa(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    user = get_current_user_profile(credentials.credentials)
+    return get_qa_service(user, credentials.credentials)
+
+
+@router.get("/devs")
+def get_devs(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    user = get_current_user_profile(credentials.credentials)
+    return get_devs_service(user, credentials.credentials)

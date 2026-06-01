@@ -37,6 +37,7 @@ def create_project(
 def get_projects(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
+    print("TOKEN:", credentials.credentials[:20])
     user = get_current_user_profile(credentials.credentials)
     return list_projects(user, credentials.credentials)
 

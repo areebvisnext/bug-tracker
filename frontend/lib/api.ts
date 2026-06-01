@@ -10,6 +10,11 @@ export type LoginPayload = {
   password: string;
 };
 
+export type ProjectPayload = {
+  name: string;
+  description: string;
+};
+
 export type SignupPayload = {
   full_name: string;
   email: string;
@@ -34,7 +39,7 @@ export type UserProfile = {
   avatar_url: string | null;
 };
 
-function authHeaders(accessToken: string): HeadersInit {
+function authHeaders(accessToken: string | null): HeadersInit {
   return { Authorization: `Bearer ${accessToken}` };
 }
 
@@ -82,9 +87,53 @@ export async function getCurrentUser(accessToken: string): Promise<UserProfile> 
 }
 
 export async function logoutUser(accessToken: string): Promise<void> {
+  console.log(API_BASE)
   const res = await fetch(`${API_BASE}/api/auth/logout`, {
     method: "POST",
     headers: authHeaders(accessToken),
   });
   if (!res.ok) throw new Error(await parseError(res));
+}
+
+export async function GetProjects(accessToken: string): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/api/projects/`, {
+    method: "GET",
+    headers: authHeaders(accessToken),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function CreateProject(
+  payload: ProjectPayload, access_token:string | null
+): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/api/projects`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(access_token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+
+export async function GetDevs(accessToken: string): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/api/auth/devs`, {
+    method: "GET",
+    headers: authHeaders(accessToken),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function GetQA(accessToken: string): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/api/auth/qa`, {
+    method: "GET",
+    headers: authHeaders(accessToken),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
 }

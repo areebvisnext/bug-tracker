@@ -1,4 +1,4 @@
-from database.supabase import supabase, supabase_admin
+from database.supabase import get_supabase_db, supabase, supabase_admin
 from schemas.auth import UserProfileResponse
 
 
@@ -72,13 +72,9 @@ def get_current_user_profile(access_token: str) -> UserProfileResponse:
 
     metadata = user.user_metadata or {}
     full_name = (
-        profile_row.get("full_name")
-        if profile_row
-        else metadata.get("full_name") or ""
+        profile_row.get("full_name") if profile_row else metadata.get("full_name") or ""
     )
-    role = (
-        profile_row.get("role") if profile_row else metadata.get("role") or ""
-    )
+    role = profile_row.get("role") if profile_row else metadata.get("role") or ""
     email = user.email or ""
     username = metadata.get("username") or _username_from_profile(full_name, email)
 
@@ -93,3 +89,17 @@ def get_current_user_profile(access_token: str) -> UserProfileResponse:
         username=username,
         avatar_url=metadata.get("avatar_url"),
     )
+
+
+def get_qa_service(user: UserProfileResponse, access_token: str):
+    if user:
+        db = get_supabase_db(access_token)
+        res = db.table("profiles").select("*").eq("role", "QA").execute()
+        return res.data[0]
+
+
+def get_devs_service(user: UserProfileResponse, access_token: str):
+    if user:
+        db = get_supabase_db(access_token)
+        res = db.table("profiles").select("*").eq("role", "Developer").execute()
+        return res.data[0]
