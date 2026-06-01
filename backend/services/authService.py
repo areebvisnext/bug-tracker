@@ -1,4 +1,5 @@
 from database.supabase import supabase, supabase_admin
+from schemas.auth import UserProfileResponse
 
 
 def signup_user(data):
@@ -55,7 +56,7 @@ def _username_from_profile(full_name: str, email: str) -> str:
     return email.split("@")[0].lower()
 
 
-def get_current_user_profile(access_token: str) -> dict:
+def get_current_user_profile(access_token: str) -> UserProfileResponse:
     auth_response = supabase.auth.get_user(jwt=access_token)
     user = auth_response.user
 
@@ -83,12 +84,12 @@ def get_current_user_profile(access_token: str) -> dict:
 
     phone = user.phone or metadata.get("phone")
 
-    return {
-        "id": user.id,
-        "email": email,
-        "phone": phone,
-        "full_name": full_name,
-        "role": role,
-        "username": username,
-        "avatar_url": metadata.get("avatar_url"),
-    }
+    return UserProfileResponse(
+        id=user.id,
+        email=email,
+        phone=phone,
+        full_name=full_name,
+        role=role,
+        username=username,
+        avatar_url=metadata.get("avatar_url"),
+    )
