@@ -13,6 +13,16 @@ export type LoginPayload = {
 export type ProjectPayload = {
   name: string;
   description: string;
+  logo?: File | null;
+};
+
+export type ProjectResponse = {
+  id: number;
+  name: string;
+  description: string | null;
+  logo?: string | null;
+  created_by: UserProfile;
+  created_at: string;
 };
 
 export type SignupPayload = {
@@ -105,15 +115,18 @@ export async function GetProjects(accessToken: string): Promise<any[]> {
 }
 
 export async function CreateProject(
-  payload: ProjectPayload, access_token:string | null
-): Promise<{ message: string }> {
-  const res = await fetch(`${API_BASE}/api/projects`, {
+  payload: ProjectPayload,
+  access_token:string | null
+): Promise<ProjectResponse> {
+  const formData = new FormData();
+  formData.append("name", payload.name);
+  if (payload.description) formData.append("description", payload.description);
+  if (payload.logo) formData.append("logo_file", payload.logo);
+
+  const res = await fetch(`${API_BASE}/api/projects/upload`, {
     method: "POST",
-    headers: {
-      ...authHeaders(access_token),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    headers: authHeaders(access_token),
+    body: formData,
   });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
@@ -133,6 +146,42 @@ export async function GetQA(accessToken: string): Promise<any[]> {
   const res = await fetch(`${API_BASE}/api/auth/qa`, {
     method: "GET",
     headers: authHeaders(accessToken),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function UpdateProject(
+  projectId: number,
+  payload: Partial<ProjectPayload>,
+  access_token: string | null
+): Promise<ProjectResponse> {
+  const formData = new FormData();
+  if (payload.name) formData.append("name", payload.name);
+  if (payload.description) formData.append("description", payload.description);
+  if (payload.logo) formData.append("logo_file", payload.logo);
+
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/upload`, {
+    method: "PUT",
+    headers: authHeaders(access_token),
+    body: formData,
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function AddMembersToProject(
+  projectId: number,
+  userId: string,
+  access_token: string | null
+): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/members`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(access_token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ user_id: userId }),
   });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();

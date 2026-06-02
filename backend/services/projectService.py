@@ -1,21 +1,17 @@
+from pathlib import Path
 from sys import exception
 from unittest import result
-from fastapi import HTTPException
+from uuid import uuid4
+import imghdr
+
+from fastapi import HTTPException, UploadFile
 from postgrest.exceptions import APIError
 
+from config import SUPABASE_STORAGE_BUCKET
 from database.supabase import get_supabase_db, supabase
 from schemas.auth import UserProfileResponse
 from schemas.projects import ProjectCreate, ProjectResponse, ProjectUpdate
 from services.authorization import can_access_project, can_manage_project
-
-
-def _username_from_name(full_name: str) -> str:
-    parts = full_name.lower().strip().split()
-    if len(parts) >= 2:
-        return f"{parts[0]}.{parts[1]}"
-    if parts:
-        return parts[0]
-    return "user"
 
 
 def _profile_for_user(user_id: str) -> UserProfileResponse | None:
@@ -35,7 +31,6 @@ def _profile_for_user(user_id: str) -> UserProfileResponse | None:
         email="",
         full_name=row["full_name"],
         role=row["role"],
-        username=_username_from_name(row["full_name"]),
         phone=None,
         avatar_url=None,
     )
@@ -56,6 +51,7 @@ def _row_to_project_response(
         id=row["id"],
         name=row["name"],
         description=row.get("description"),
+        logo=row.get("logo"),
         created_by=resolved_creator,
         created_at=row["created_at"],
     )
@@ -73,8 +69,71 @@ def _add_project_member(db, project_id: str, user_id: str) -> None:
         ) from e
 
 
+def _build_project_logo_path(project_id: int, filename: str) -> str:
+    extension = Path(filename).suffix or ""
+    return f"projects/{project_id}/{uuid4().hex}{extension}"
+
+
+def _upload_project_logo(db, logo_file: UploadFile, project_id: int) -> str:
+    upload_path = _build_project_logo_path(project_id, logo_file.filename)
+    bucket = db.storage.from_(SUPABASE_STORAGE_BUCKET)
+
+    logo_file.file.seek(0)
+    data = logo_file.file.read()
+
+    content_type = (logo_file.content_type or "").lower()
+    detected = imghdr.what(None, data)
+
+    if not detected:
+        ext = Path(logo_file.filename).suffix.lower()
+        if ext in (".jpg", ".jpeg"):
+            detected = "jpeg"
+        elif ext == ".png":
+            detected = "png"
+
+    if detected in ("jpeg", "png"):
+        if detected == "jpeg":
+            content_type = "image/jpeg"
+        else:
+            content_type = "image/png"
+    else:
+        if content_type.startswith("image/") and content_type in (
+            "image/jpeg",
+            "image/png",
+        ):
+            pass
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported image type; only JPEG and PNG are allowed",
+            )
+
+    result = bucket.upload(
+        upload_path,
+        data,
+        file_options={"content-type": content_type},
+    )
+    if getattr(result, "error", None):
+        raise HTTPException(
+            status_code=400,
+            detail=(getattr(result, "error", None) or "Failed to upload logo"),
+        )
+
+    public_url = bucket.get_public_url(upload_path)
+    if not public_url:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to resolve logo public URL",
+        )
+
+    return public_url
+
+
 def create_project_service(
-    body: ProjectCreate, user: UserProfileResponse, access_token: str
+    body: ProjectCreate,
+    user: UserProfileResponse,
+    access_token: str,
+    logo_file: UploadFile | None = None,
 ) -> ProjectResponse:
     if user.role != "Manager":
         raise HTTPException(status_code=403, detail="Only managers can create projects")
@@ -96,6 +155,26 @@ def create_project_service(
 
     project_row = result.data[0]
     project_id = project_row["id"]
+
+    if logo_file:
+        try:
+            logo_url = _upload_project_logo(db, logo_file, project_id)
+            update_result = (
+                db.table("projects")
+                .update({"logo": logo_url})
+                .eq("id", project_id)
+                .select("*")
+                .execute()
+            )
+            if not update_result.data:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Project logo update failed",
+                )
+            project_row = update_result.data[0]
+        except HTTPException:
+            db.table("projects").delete().eq("id", project_id).execute()
+            raise
 
     try:
         _add_project_member(db, project_id, user.id)
@@ -172,6 +251,42 @@ def update_project_service(
     if not can_manage_project(user, project):
         raise HTTPException(status_code=403, detail="Forbidden")
     result = db.table("projects").update(update_body).eq("id", project_id).execute()
+    return _row_to_project_response(result.data[0])
+
+
+def update_project_with_logo_service(
+    project_id: int,
+    name: str,
+    description: str | None,
+    logo_file,
+    user: UserProfileResponse,
+    access_token: str,
+):
+    if user.role != "Manager":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    db = get_supabase_db(access_token)
+
+    result = db.table("projects").select("*").eq("id", project_id).limit(1).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project = result.data[0]
+    if not can_manage_project(user, project):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    logo_url = None
+    if logo_file:
+        logo_url = _upload_project_logo(db, logo_file, project_id)
+
+    update_data = {"name": name}
+    if description is not None:
+        update_data["description"] = description
+    if logo_url:
+        update_data["logo"] = logo_url
+
+    result = db.table("projects").update(update_data).eq("id", project_id).execute()
+
     return _row_to_project_response(result.data[0])
 
 

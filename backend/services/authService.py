@@ -47,15 +47,6 @@ def logout_user(access_token: str, scope: str = "global") -> None:
     supabase.auth.admin.sign_out(access_token, scope)
 
 
-def _username_from_profile(full_name: str, email: str) -> str:
-    if full_name.strip():
-        parts = full_name.lower().strip().split()
-        if len(parts) >= 2:
-            return f"{parts[0]}.{parts[1]}"
-        return parts[0]
-    return email.split("@")[0].lower()
-
-
 def get_current_user_profile(access_token: str) -> UserProfileResponse:
     auth_response = supabase.auth.get_user(jwt=access_token)
     user = auth_response.user
@@ -76,8 +67,6 @@ def get_current_user_profile(access_token: str) -> UserProfileResponse:
     )
     role = profile_row.get("role") if profile_row else metadata.get("role") or ""
     email = user.email or ""
-    username = metadata.get("username") or _username_from_profile(full_name, email)
-
     phone = user.phone or metadata.get("phone")
 
     return UserProfileResponse(
@@ -86,7 +75,6 @@ def get_current_user_profile(access_token: str) -> UserProfileResponse:
         phone=phone,
         full_name=full_name,
         role=role,
-        username=username,
         avatar_url=metadata.get("avatar_url"),
     )
 
@@ -95,11 +83,13 @@ def get_qa_service(user: UserProfileResponse, access_token: str):
     if user:
         db = get_supabase_db(access_token)
         res = db.table("profiles").select("*").eq("role", "QA").execute()
-        return res.data[0]
+        return res.data
+    return []
 
 
 def get_devs_service(user: UserProfileResponse, access_token: str):
     if user:
         db = get_supabase_db(access_token)
         res = db.table("profiles").select("*").eq("role", "Developer").execute()
-        return res.data[0]
+        return res.data
+    return []

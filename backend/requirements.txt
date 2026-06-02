@@ -4,3 +4,4 @@ email-validator
 uvicorn
 python-dotenv
 supabase
+python-multipart

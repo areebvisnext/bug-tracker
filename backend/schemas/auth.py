@@ -21,5 +21,4 @@ class UserProfileResponse(BaseModel):
     phone: str | None = None
     full_name: str
     role: str
-    username: str
     avatar_url: str | None = None
