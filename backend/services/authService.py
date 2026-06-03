@@ -1,5 +1,7 @@
+from fastapi import HTTPException
 from database.supabase import get_supabase_db, supabase, supabase_admin
 from schemas.auth import UserProfileResponse
+from typing import Literal, Any, cast
 
 
 def signup_user(data):
@@ -43,23 +45,27 @@ def login_user(data):
     return response
 
 
-def logout_user(access_token: str, scope: str = "global") -> None:
+def logout_user(
+    access_token: str, scope: Literal["global", "local", "others"] = "global"
+) -> None:
     supabase.auth.admin.sign_out(access_token, scope)
 
 
 def get_current_user_profile(access_token: str) -> UserProfileResponse:
     auth_response = supabase.auth.get_user(jwt=access_token)
+    if not auth_response:
+        raise HTTPException(status_code=404, detail="Current user not found")
     user = auth_response.user
 
     if not user:
         raise Exception("User not found")
 
-    profile_row = None
+    profile_row: dict[str, Any] | None = None
     profile_result = (
         supabase.table("profiles").select("full_name, role").eq("id", user.id).execute()
     )
     if profile_result.data:
-        profile_row = profile_result.data[0]
+        profile_row = cast(dict[str, Any], profile_result.data[0])
 
     metadata = user.user_metadata or {}
     full_name = (
@@ -73,8 +79,8 @@ def get_current_user_profile(access_token: str) -> UserProfileResponse:
         id=user.id,
         email=email,
         phone=phone,
-        full_name=full_name,
-        role=role,
+        full_name=str(full_name),
+        role=str(role),
         avatar_url=metadata.get("avatar_url"),
     )
 

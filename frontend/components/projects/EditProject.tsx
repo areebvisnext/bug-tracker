@@ -1,7 +1,8 @@
 "use client";
 
+import { GetProjectMembers } from "@/lib/api";
+import { getAccessToken } from "@/lib/auth";
 import { useEffect, useRef, useState } from "react";
-
 interface User {
   id: string;
   full_name: string;
@@ -43,6 +44,7 @@ export default function EditProject({
   const [preview, setPreview] = useState("");
   const [selectedDevs, setSelectedDevs] = useState<Set<string>>(new Set());
   const [selectedQAs, setSelectedQAs] = useState<Set<string>>(new Set());
+  const [previousMembers, setPreviousMember] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [showDevDropdown, setShowDevDropdown] = useState(false);
   const [showQADropdown, setShowQADropdown] = useState(false);
@@ -52,12 +54,33 @@ export default function EditProject({
   useEffect(() => {
     if (!open || !project) return;
 
+    const load = async () => {
+      setSelectedDevs(new Set());
+      setSelectedQAs(new Set());
+      let token = await getAccessToken();
+      let members = await GetProjectMembers(token, project.id);
+      const memberIdSet = new Set(members.map((member) => member.user_id));
+      setPreviousMember(memberIdSet);
+      const devSet: Set<string> = new Set();
+      devs.forEach((dev) => {
+        if (memberIdSet.has(dev.id)) {
+          devSet.add(dev.id);
+        }
+      });
+      setSelectedDevs(devSet);
+      const qaSet: Set<string> = new Set();
+      qas.forEach((qa) => {
+        if (memberIdSet.has(qa.id)) {
+          qaSet.add(qa.id);
+        }
+      });
+      setSelectedQAs(qaSet);
+    };
+    load();
     setName(project.name);
     setDescription(project.description || "");
     setLogo(null);
     setPreview(project.logo || "");
-    setSelectedDevs(new Set());
-    setSelectedQAs(new Set());
     setShowDevDropdown(false);
     setShowQADropdown(false);
 
@@ -98,6 +121,21 @@ export default function EditProject({
 
     try {
       setLoading(true);
+      const newSet = new Set(selectedDevs);
+      selectedDevs.forEach((dev) => {
+        if (previousMembers.has(dev)) {
+          newSet.delete(dev);
+        }
+      });
+      setSelectedDevs(newSet);
+
+      const newSetQA = new Set(selectedQAs);
+      selectedQAs.forEach((qa) => {
+        if (previousMembers.has(qa)) {
+          newSetQA.delete(qa);
+        }
+      });
+      setSelectedQAs(newSetQA);
 
       await onSubmit({
         name,

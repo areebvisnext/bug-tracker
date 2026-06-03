@@ -10,6 +10,7 @@ import {
   GetQA,
   UpdateProject,
   AddMembersToProject,
+  GetProjectMembers,
   getCurrentUser,
 } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";

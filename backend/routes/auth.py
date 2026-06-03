@@ -34,19 +34,17 @@ def login(data: LoginSchema):
 
     try:
         response = login_user(data)
+        if not response.session:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        return {
+            "access_token": response.session.access_token,
+            "refresh_token": response.session.refresh_token,
+            "user": response.user.model_dump() if response.user else None,
+        }
     except AuthApiError as e:
         raise_auth_http_exception(e)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    if not response.session:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    return {
-        "access_token": response.session.access_token,
-        "refresh_token": response.session.refresh_token,
-        "user": response.user.model_dump() if response.user else None,
-    }
 
 
 @router.get("/me", response_model=UserProfileResponse)

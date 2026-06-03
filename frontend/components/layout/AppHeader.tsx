@@ -32,14 +32,14 @@ export function AppHeader({ userName, avatarUrl }: AppHeaderProps) {
           </Link>
           <nav className="hidden items-center gap-8 sm:flex">
             <Link
-              href="#"
+              href="/projects"
               className="flex items-center gap-2 text-[14px] font-medium text-[#64748B] hover:text-[#0F172A]"
             >
               <FolderIcon />
               Projects
             </Link>
             <Link
-              href="#"
+              href="/bugs"
               className="flex items-center gap-2 text-[14px] font-medium text-[#64748B] hover:text-[#0F172A]"
             >
               <BugIcon />

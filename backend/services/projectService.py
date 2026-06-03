@@ -1,6 +1,4 @@
 from pathlib import Path
-from sys import exception
-from unittest import result
 from uuid import uuid4
 import imghdr
 
@@ -12,6 +10,8 @@ from database.supabase import get_supabase_db, supabase
 from schemas.auth import UserProfileResponse
 from schemas.projects import ProjectCreate, ProjectResponse, ProjectUpdate
 from services.authorization import can_access_project, can_manage_project
+
+from typing import cast
 
 
 def _profile_for_user(user_id: str) -> UserProfileResponse | None:
@@ -25,7 +25,7 @@ def _profile_for_user(user_id: str) -> UserProfileResponse | None:
     if not result.data:
         return None
 
-    row = result.data[0]
+    row = cast(dict, result.data[0])
     return UserProfileResponse(
         id=row["id"],
         email="",
@@ -75,7 +75,7 @@ def _build_project_logo_path(project_id: int, filename: str) -> str:
 
 
 def _upload_project_logo(db, logo_file: UploadFile, project_id: int) -> str:
-    upload_path = _build_project_logo_path(project_id, logo_file.filename)
+    upload_path = _build_project_logo_path(project_id, str(logo_file.filename))
     bucket = db.storage.from_(SUPABASE_STORAGE_BUCKET)
 
     logo_file.file.seek(0)
@@ -85,7 +85,7 @@ def _upload_project_logo(db, logo_file: UploadFile, project_id: int) -> str:
     detected = imghdr.what(None, data)
 
     if not detected:
-        ext = Path(logo_file.filename).suffix.lower()
+        ext = Path(str(logo_file.filename)).suffix.lower()
         if ext in (".jpg", ".jpeg"):
             detected = "jpeg"
         elif ext == ".png":
@@ -153,7 +153,7 @@ def create_project_service(
     if not result.data:
         raise HTTPException(status_code=500, detail="Project creation failed")
 
-    project_row = result.data[0]
+    project_row = cast(dict, result.data[0])
     project_id = project_row["id"]
 
     if logo_file:
@@ -182,7 +182,7 @@ def create_project_service(
         db.table("projects").delete().eq("id", project_id).execute()
         raise
 
-    return _row_to_project_response(project_row, creator=user)
+    return _row_to_project_response(cast(dict, project_row), creator=user)
 
 
 def _project_ids_for_user(db, user_id: str) -> list[str]:
@@ -219,19 +219,17 @@ def list_projects(
         raise HTTPException(status_code=400, detail=e.message) from e
 
     rows = result.data or []
-    return [_row_to_project_response(row) for row in rows]
+    return [_row_to_project_response(cast(dict, row)) for row in rows]
 
 
-def get_project_service(
-    project_id: int, user: UserProfileResponse, access_token: str
-) -> ProjectResponse:
+def get_project_service(project_id: int, user: UserProfileResponse, access_token: str):
     db = get_supabase_db(access_token)
     result = db.table("projects").select("*").eq("id", project_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Project not found")
     project = result.data[0]
     if can_access_project(db, user, project_id):
-        return _row_to_project_response(project)
+        return _row_to_project_response(cast(dict, project))
 
 
 def update_project_service(
@@ -251,7 +249,7 @@ def update_project_service(
     if not can_manage_project(user, project):
         raise HTTPException(status_code=403, detail="Forbidden")
     result = db.table("projects").update(update_body).eq("id", project_id).execute()
-    return _row_to_project_response(result.data[0])
+    return _row_to_project_response(cast(dict, result.data[0]))
 
 
 def update_project_with_logo_service(
@@ -287,7 +285,7 @@ def update_project_with_logo_service(
 
     result = db.table("projects").update(update_data).eq("id", project_id).execute()
 
-    return _row_to_project_response(result.data[0])
+    return _row_to_project_response(cast(dict, result.data[0]))
 
 
 def add_members_service(

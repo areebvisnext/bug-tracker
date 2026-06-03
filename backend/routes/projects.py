@@ -81,7 +81,6 @@ async def update_project_with_logo(
 def get_projects(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-    print("TOKEN:", credentials.credentials[:20])
     user = get_current_user_profile(credentials.credentials)
     return list_projects(user, credentials.credentials)
 
@@ -112,7 +111,9 @@ def add_members(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
     user = get_current_user_profile(credentials.credentials)
-    return add_members_service(project_id, request.user_id, user, credentials.credentials)
+    return add_members_service(
+        project_id, request.user_id, user, credentials.credentials
+    )
 
 
 @router.delete("/{project_id}/members/{user_id}")

@@ -151,6 +151,103 @@ export async function GetQA(accessToken: string): Promise<any[]> {
   return res.json();
 }
 
+export type BugResponse = {
+  id: number;
+  title: string;
+  description: string | null;
+  type: "bug" | "feature";
+  status: "new" | "started" | "completed" | "resolved";
+  deadline: string | null;
+  screenshot?: string | null;
+  project_id: number;
+  assigned_to: string;
+  created_by: string;
+  created_at: string;
+};
+
+export type BugPayload = {
+  title: string;
+  description?: string | null;
+  type: "bug" | "feature";
+  status: "new" | "started" | "completed" | "resolved";
+  deadline?: string | null;
+  project_id: number;
+  assigned_to: string;
+};
+
+export async function GetBugs(accessToken: string): Promise<BugResponse[]> {
+  const res = await fetch(`${API_BASE}/api/bugs/`, {
+    method: "GET",
+    headers: authHeaders(accessToken),
+  });
+  if (!res.ok) {
+    if (res.status === 404) return [];
+    throw new Error(await parseError(res));
+  }
+  return res.json();
+}
+
+export async function CreateBug(
+  payload: BugPayload,
+  access_token: string | null
+): Promise<BugResponse> {
+  const res = await fetch(`${API_BASE}/api/bugs/`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(access_token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function GetBug(
+  bugId: number,
+  accessToken: string
+): Promise<BugResponse> {
+  const res = await fetch(`${API_BASE}/api/bugs/${bugId}`, {
+    method: "GET",
+    headers: authHeaders(accessToken),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function UpdateBug(
+  bugId: number,
+  payload: Partial<BugPayload>,
+  access_token: string | null
+): Promise<string> {
+  const res = await fetch(`${API_BASE}/api/bugs/${bugId}`, {
+    method: "PUT",
+    headers: {
+      ...authHeaders(access_token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.text();
+}
+
+export async function UploadBugScreenshot(
+  bugId: number,
+  file: File,
+  access_token: string | null
+): Promise<void> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${API_BASE}/api/bugs/${bugId}/screenshot`, {
+    method: "POST",
+    headers: authHeaders(access_token),
+    body: formData,
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+}
+
 export async function UpdateProject(
   projectId: number,
   payload: Partial<ProjectPayload>,
@@ -184,5 +281,15 @@ export async function AddMembersToProject(
     body: JSON.stringify({ user_id: userId }),
   });
   if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function GetProjectMembers(accessToken: string | null, project_id:number): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/api/projects/${project_id}/members`, {
+    method: "GET",
+    headers: authHeaders(accessToken),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  console.log(res);
   return res.json();
 }

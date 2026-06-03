@@ -1,4 +1,5 @@
-from unittest import result
+from datetime import datetime
+from typing import cast, Any, Literal
 import uuid
 from fastapi import HTTPException
 
@@ -14,32 +15,37 @@ from services.authorization import (
 
 
 def row_to_Bug(row: dict):
+    type_value = cast(Literal["bug", "feature"], row.get("type"))
+    status_value = cast(
+        Literal["new", "started", "completed", "resolved"], row.get("status")
+    )
     return BugResponse(
-        id=row.get("id"),
-        title=row.get("title"),
+        id=cast(int, row.get("id")),
+        title=str(row.get("title")),
         description=row.get("description"),
-        type=row.get("type"),
-        status=row.get("status"),
+        type=type_value,
+        status=status_value,
         deadline=row.get("deadline"),
         screenshot=row.get("screenshot"),
-        project_id=row.get("project_id"),
-        assigned_to=row.get("assigned_to"),
-        created_at=row.get("created_at"),
+        project_id=cast(int, row.get("project_id")),
+        assigned_to=cast(str, row.get("assigned_to")),
+        created_by=str(row.get("created_by")),
+        created_at=cast(datetime, row.get("created_at")),
     )
 
 
 def create_bug_service(bug: BugCreate, user: UserProfileResponse, access_token: str):
     db = get_supabase_db(access_token)
     if user.role != "QA":
-        raise HTTPException(status_code=403, message="Only a QA can create bug")
+        raise HTTPException(status_code=403, detail="Only a QA can create bug")
     if not can_access_project(db, user, bug.project_id):
-        raise HTTPException(status_code=403, message="Not allowed")
+        raise HTTPException(status_code=403, detail="Not allowed")
     if not can_access_project_by_id(db, bug.assigned_to, bug.project_id):
-        raise HTTPException(status_code=403, message="Not allowed")
+        raise HTTPException(status_code=403, detail="Not allowed")
     payload = bug.model_dump(mode="json")
     payload["created_by"] = user.id
     result = db.table("bugs").insert(payload).execute()
-    return row_to_Bug(result.data[0])
+    return row_to_Bug(cast(dict, result.data[0]))
 
 
 def get_bugList_service(user: UserProfileResponse, access_token: str):
@@ -50,13 +56,13 @@ def get_bugList_service(user: UserProfileResponse, access_token: str):
         .eq("user_id", user.id)
         .execute()
     )
-    result = response.data
+    result = cast(list[dict[str, Any]], response.data)
     project_ids = []
     for i in result:
         project_ids.append(i["project_id"])
     response = db.table("bugs").select("*").in_("project_id", project_ids).execute()
     if not response.data:
-        raise HTTPException(status_code=404, message="Not Found")
+        raise HTTPException(status_code=404, detail="Not Found")
     result = response.data
     return result
 
@@ -64,21 +70,22 @@ def get_bugList_service(user: UserProfileResponse, access_token: str):
 def get_bug_service(bug_id: int, user: UserProfileResponse, access_token: str):
     db = get_supabase_db(access_token)
     if not can_access_bug(db, bug_id, user.id):
-        raise HTTPException(status_code=403, message="Not allowed")
+        raise HTTPException(status_code=403, detail="Not allowed")
     result = db.table("bugs").select("*").eq("id", bug_id).execute()
-    return row_to_Bug(result.data[0])
+    return row_to_Bug(cast(dict, result.data[0]))
 
 
 def delete_bug_service(bug_id: int, user: UserProfileResponse, access_token: str):
     db = get_supabase_db(access_token)
     response = db.table("bugs").select("created_by").eq("id", bug_id).execute()
+    result = response.data[0]
     if not response.data:
-        raise HTTPException(status_code=404, message="Bug does not exist")
-    if response.data[0]["created_by"] != user.id:
-        raise HTTPException(status_code=403, message="Not alloweed")
+        raise HTTPException(status_code=404, detail="Bug does not exist")
+    if result != user.id:
+        raise HTTPException(status_code=403, detail="Not allowed")
     response = db.table("bugs").delete().eq("id", bug_id).execute()
     if not response.data:
-        raise HTTPException(status_code=403, message="Error")
+        raise HTTPException(status_code=403, detail="Error")
     return "Deleted succesfully"
 
 
@@ -121,7 +128,7 @@ def update_bug_service(
     response = db.table("bugs").select("*").eq("id", bug_id).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Not found")
-    result = response.data[0]
+    result = cast(dict, response.data[0])
     if user.role == "Manager":
         raise HTTPException(status_code=403, detail="Access denied")
     if user.role == "QA":

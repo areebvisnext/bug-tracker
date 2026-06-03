@@ -41,7 +41,7 @@ def can_manage_project(user: UserProfileResponse, project):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
-def can_access_bug(db, bug_id: int, user_id: int):
+def can_access_bug(db, bug_id: int, user_id: str):
     response = db.table("bugs").select("project_id").eq("id", bug_id).limit(1).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Bug not found")

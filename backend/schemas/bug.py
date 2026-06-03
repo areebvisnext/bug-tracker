@@ -6,7 +6,7 @@ from schemas.auth import UserProfileResponse
 
 
 class BugCreate(BaseModel):
-    title: str = Field
+    title: str
     description: str | None = None
     type: Literal["bug", "feature"]
     status: Literal["new", "started", "completed", "resolved"]
@@ -18,7 +18,7 @@ class BugCreate(BaseModel):
 
 class BugResponse(BaseModel):
     id: int
-    title: str = Field
+    title: str
     description: str | None = None
     type: Literal["bug", "feature"]
     status: Literal["new", "started", "completed", "resolved"]
@@ -26,6 +26,7 @@ class BugResponse(BaseModel):
     screenshot: str | None = None
     project_id: int
     assigned_to: str
+    created_by: str
     created_at: datetime
 
 

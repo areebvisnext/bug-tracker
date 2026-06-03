@@ -7,7 +7,12 @@ Thumbs.db
 .vscode/
 .idea/
 
-Training Instructions.pdf
+__pycache__/
+*.pyc
+
+backend/**/__pycache__/
+backend/**/*.pyc
+
 # =========================
 # Logs
 # =========================
