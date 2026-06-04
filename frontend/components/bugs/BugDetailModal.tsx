@@ -49,13 +49,16 @@ function getStatusOptionsForType(type: "bug" | "feature") {
 
 function formatDateForInput(value: string | null) {
   if (!value) return "";
-  const date = new Date(value);
-  return date.toISOString().slice(0, 10);
+  return value.slice(0, 10);
 }
-
 function formatReadableDate(value: string | null) {
   if (!value) return "-";
-  const date = new Date(value);
+  const parts = value.split("-");
+  if (parts.length !== 3) return "-";
+  const [year, month, day] = parts.map(Number);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return "-";
+  const date = new Date(year, month - 1, day);
+  if (isNaN(date.getTime())) return "-";
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -133,7 +136,7 @@ export default function BugDetailModal({
         payload.title = title;
         payload.description = description || null;
         payload.type = bugType;
-        payload.deadline = deadline.toString().slice(0, 10) || null;
+        payload.deadline = deadline || null;
         payload.assigned_to = assignedTo;
       }
 

@@ -177,7 +177,7 @@ def update_bug_service(
                 detail=f"Status '{bug.status}' is invalid for new type '{bug.type}'",
             )
 
-    payload = bug.model_dump(exclude_unset=True)
+    payload = bug.model_dump(exclude_unset=True, mode="json")
 
     if user.role == "QA" and result["created_by"] == user.id:
         result = db.table("bugs").update(payload).eq("id", bug_id).execute()
