@@ -2,15 +2,16 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
 from schemas.auth import LoginSchema, SignupSchema, UserProfileResponse
 from services.auth_errors import raise_auth_http_exception
 from services.authService import (
     get_current_user_profile,
+    get_qa_service,
+    get_devs_service,
     login_user,
     logout_user,
     signup_user,
-    get_qa_service,
-    get_devs_service,
 )
 from supabase_auth.errors import AuthApiError
 
@@ -49,6 +50,7 @@ def login(data: LoginSchema):
 
 @router.get("/me", response_model=UserProfileResponse)
 def get_me(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+
     try:
         return get_current_user_profile(credentials.credentials)
     except AuthApiError as e:
@@ -62,6 +64,7 @@ def logout(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     scope: Literal["global", "local", "others"] = Query(default="global"),
 ):
+
     try:
         logout_user(credentials.credentials, scope=scope)
     except AuthApiError as e:
@@ -74,11 +77,13 @@ def logout(
 
 @router.get("/qa")
 def get_qa(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+
     user = get_current_user_profile(credentials.credentials)
     return get_qa_service(user, credentials.credentials)
 
 
 @router.get("/devs")
 def get_devs(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+
     user = get_current_user_profile(credentials.credentials)
     return get_devs_service(user, credentials.credentials)

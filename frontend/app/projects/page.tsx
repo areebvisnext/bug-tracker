@@ -1,22 +1,23 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { AppHeader } from "@/components/layout/AppHeader";
 import ProjectCard from "@/components/projects/ProjectCard";
-import { useEffect, useState } from "react";
+import AddProject from "@/components/projects/AddProject";
+import EditProject from "@/components/projects/EditProject";
+
 import {
   GetProjects,
   CreateProject,
-  GetDevs,
-  GetQA,
   UpdateProject,
   AddMembersToProject,
-  GetProjectMembers,
+  GetDevs,
+  GetQA,
   getCurrentUser,
 } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
-import { useRouter } from "next/navigation";
-import AddProject from "@/components/projects/AddProject";
-import EditProject from "@/components/projects/EditProject";
 
 export default function Projects() {
   interface Project {
@@ -36,6 +37,7 @@ export default function Projects() {
   }
 
   const router = useRouter();
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [devs, setDevs] = useState<User[]>([]);
   const [qas, setQas] = useState<User[]>([]);
@@ -57,17 +59,17 @@ export default function Projects() {
         const userData = await getCurrentUser(token);
         setCurrentUser(userData as User);
 
-        const projectsData = await GetProjects(token);
+        const [projectsData, devsData, qasData] = await Promise.all([
+          GetProjects(token),
+          GetDevs(token),
+          GetQA(token),
+        ]);
+
         setProjects(projectsData);
-
-        const devsData = await GetDevs(token);
         setDevs(devsData);
-
-        const qasData = await GetQA(token);
         setQas(qasData);
       } catch (error) {
         console.error("Error loading projects:", error);
-        // If token/user fetch fails, redirect to login
         router.replace("/auth/login");
       }
     }
@@ -101,7 +103,6 @@ export default function Projects() {
         await AddMembersToProject(selectedProject.id, memberId, token);
       }
 
-      // Update projects list
       setProjects((current) =>
         current.map((p) => (p.id === selectedProject.id ? updatedProject : p)),
       );
@@ -152,12 +153,14 @@ export default function Projects() {
               Hi Dev, Welcome to ManageBug
             </span>
           </div>
+
           <div className="flex gap-2">
             <input
               type="text"
               className="px-2 bg-gray-100 rounded-md"
               placeholder="Search for projects here"
             />
+
             {currentUser?.role === "Manager" && (
               <button
                 className="text-white bg-blue-600 px-4 rounded-md"
@@ -168,6 +171,7 @@ export default function Projects() {
             )}
           </div>
         </div>
+
         <div className="ml-24 mt-5 mr-20 grid grid-cols-3 gap-y-5">
           {projects.map((project) => (
             <ProjectCard

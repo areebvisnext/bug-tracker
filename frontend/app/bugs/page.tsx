@@ -1,21 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+
 import { AppHeader } from "@/components/layout/AppHeader";
 import BugDetailModal from "@/components/bugs/BugDetailModal";
 import CreateBugModal from "@/components/bugs/CreateBugModal";
 import ActionMenu from "@/components/bugs/ActionMenu";
+
 import { getAccessToken } from "@/lib/auth";
 import {
-  getCurrentUser,
-  GetBugs,
   GetBug,
-  GetProjects,
-  GetDevs,
+  GetBugs,
+  DeleteBug,
   CreateBug,
-  UploadBugScreenshot,
+  UpdateBug,
   BugResponse,
+  GetDevs,
+  getCurrentUser,
+  GetProjects,
   ProjectResponse,
+  UploadBugScreenshot,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
@@ -32,6 +36,7 @@ const ROWS_OPTIONS = [5, 10, 20, 50];
 
 export default function BugsPage() {
   const router = useRouter();
+
   const [bugs, setBugs] = useState<BugResponse[]>([]);
   const [projects, setProjects] = useState<ProjectResponse[]>([]);
   const [devs, setDevs] = useState<UserProfile[]>([]);
@@ -63,14 +68,17 @@ export default function BugsPage() {
         router.replace("/auth/login");
         return;
       }
+
       try {
         const userData = await getCurrentUser(token);
         setCurrentUser(userData as UserProfile);
+
         const [bugsData, projectsData, devsData] = await Promise.all([
           GetBugs(token),
           GetProjects(token),
           GetDevs(token),
         ]);
+
         setBugs(bugsData);
         setProjects(projectsData);
         setDevs(devsData);
@@ -89,13 +97,18 @@ export default function BugsPage() {
         setOpenMenuId(null);
       }
     }
+
     document.addEventListener("mousedown", handleClick);
+
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   const assignedToMap = useMemo(() => {
     const map: Record<string, string> = {};
 
+    if (!devs) {
+      return {};
+    }
     for (const dev of devs) {
       map[dev.id] = dev.full_name;
     }
@@ -105,17 +118,22 @@ export default function BugsPage() {
 
   const filteredBugs = useMemo(() => {
     const query = search.toLowerCase();
+
     return bugs.filter((bug) => {
       const matchesSearch =
         bug.title.toLowerCase().includes(query) ||
         (bug.description?.toLowerCase().includes(query) ?? false) ||
         assignedToMap[bug.assigned_to]?.toLowerCase().includes(query);
+
       const matchesAssigned =
         !assignedFilter || bug.assigned_to === assignedFilter;
+
       const matchesProject =
         !projectFilter || String(bug.project_id) === projectFilter;
+
       const matchesStatus = !statusFilter || bug.status === statusFilter;
       const matchesType = !typeFilter || bug.type === typeFilter;
+
       return (
         matchesSearch &&
         matchesAssigned &&
@@ -163,36 +181,42 @@ export default function BugsPage() {
           badge: "bg-blue-50 border border-blue-200",
           text: "text-blue-600",
         };
+
       case "started":
         return {
           dot: "bg-orange-400",
           badge: "bg-orange-50 border border-orange-200",
           text: "text-orange-500",
         };
+
       case "completed":
         return {
           dot: "bg-green-500",
           badge: "bg-green-50 border border-green-200",
           text: "text-green-600",
         };
+
       case "resolved":
         return {
           dot: "bg-slate-400",
           badge: "bg-slate-50 border border-slate-200",
           text: "text-slate-600",
         };
+
       case "in progress":
         return {
           dot: "bg-blue-400",
           badge: "bg-blue-50 border border-blue-200",
           text: "text-blue-500",
         };
+
       case "closed":
         return {
           dot: "bg-slate-400",
           badge: "bg-slate-50 border border-slate-200",
           text: "text-slate-600",
         };
+
       default:
         return {
           dot: "bg-gray-400",
@@ -204,6 +228,7 @@ export default function BugsPage() {
 
   function formatDate(dateString: string | null) {
     if (!dateString) return "-";
+
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "2-digit",
       day: "2-digit",
@@ -222,16 +247,27 @@ export default function BugsPage() {
   }
 
   async function handleDeleteBug(bugId: number) {
-    // await DeleteBug(bugId, token)
-    setBugs((c) => c.filter((b) => b.id !== bugId));
-    setOpenMenuId(null);
+    if (canEdit) {
+      const token = await getAccessToken();
+      await DeleteBug(bugId, token);
+
+      setBugs((c) => c.filter((b) => b.id !== bugId));
+      setOpenMenuId(null);
+    }
   }
 
   async function handleChangeStatus(bug: BugResponse, newStatus: string) {
-    // await UpdateBugStatus(bug.id, newStatus, token)
-    const updated = { ...bug, status: newStatus as BugResponse["status"] };
-    handleUpdateBug(updated);
-    setOpenMenuId(null);
+    if (canEditStatus) {
+      const token = await getAccessToken();
+
+      const payload: any = {};
+      payload.status = newStatus;
+
+      await UpdateBug(bug.id, payload, token);
+      const updated = { ...bug, status: newStatus as BugResponse["status"] };
+      handleUpdateBug(updated);
+      setOpenMenuId(null);
+    }
   }
 
   async function handleCreateBug(
@@ -248,10 +284,13 @@ export default function BugsPage() {
   ) {
     const token = getAccessToken();
     if (!token) return;
+
     const created = await CreateBug(payload, token);
+
     if (screenshotFile) {
       try {
         await UploadBugScreenshot(created.id, screenshotFile, token);
+
         const refreshed = await GetBug(created.id, token);
         setBugs((c) => [refreshed, ...c]);
         return;
@@ -281,6 +320,7 @@ export default function BugsPage() {
         <span className="whitespace-nowrap text-slate-400 font-medium">
           {label}
         </span>
+
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -296,6 +336,7 @@ export default function BugsPage() {
     return (
       <div className="min-h-screen bg-[#f4f5f7]">
         <AppHeader userName={currentUser?.full_name ?? "User"} />
+
         <div className="mx-auto max-w-7xl px-6 py-10 text-slate-500 text-sm">
           Loading bugs...
         </div>
@@ -319,6 +360,7 @@ export default function BugsPage() {
         currentUserId={currentUser?.id ?? null}
         onUpdate={handleUpdateBug}
       />
+
       <CreateBugModal
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -335,6 +377,7 @@ export default function BugsPage() {
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
               All bugs listing
             </h1>
+
             {currentUser?.role === "QA" && (
               <button
                 onClick={() => setShowCreateModal(true)}
@@ -360,6 +403,7 @@ export default function BugsPage() {
                   d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
                 />
               </svg>
+
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -374,11 +418,12 @@ export default function BugsPage() {
               label="Assigned To"
             >
               <option value="">All</option>
-              {devs.map((dev) => (
-                <option key={dev.id} value={dev.id}>
-                  {dev.full_name}
-                </option>
-              ))}
+              {devs &&
+                devs.map((dev) => (
+                  <option key={dev.id} value={dev.id}>
+                    {dev.full_name}
+                  </option>
+                ))}
             </FilterSelect>
 
             <FilterSelect
@@ -437,6 +482,7 @@ export default function BugsPage() {
                   <rect x="9" y="9" width="6" height="6" rx="1" />
                 </svg>
               </button>
+
               <button
                 onClick={() => setViewMode("list")}
                 title="List view"
@@ -468,15 +514,19 @@ export default function BugsPage() {
                       <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                         Bug Details
                       </th>
+
                       <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                         Status
                       </th>
+
                       <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                         Due Date
                       </th>
+
                       <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                         Assigned To
                       </th>
+
                       {canEditStatus && (
                         <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                           Action
@@ -610,6 +660,7 @@ export default function BugsPage() {
                             >
                               {bug.status}
                             </span>
+
                             <ActionMenu
                               bug={bug}
                               canEdit={canEdit}
@@ -661,11 +712,13 @@ export default function BugsPage() {
                               <span className="font-medium text-blue-600">
                                 Assigned To
                               </span>
+
                               <div className="flex items-center gap-2 text-slate-600">
                                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-linear-to-br from-blue-400 to-indigo-500 text-xs font-bold text-white">
                                   {(assignedToMap[bug.assigned_to] ??
                                     "?")[0]?.toUpperCase()}
                                 </div>
+
                                 <span>
                                   {assignedToMap[bug.assigned_to] ??
                                     bug.assigned_to}
@@ -696,6 +749,7 @@ export default function BugsPage() {
                 Showing {startEntry} to {endEntry} of {filteredBugs.length}{" "}
                 entries
               </span>
+
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-sm text-slate-500">
                   <span>Rows per page:</span>
@@ -711,9 +765,11 @@ export default function BugsPage() {
                     ))}
                   </select>
                 </div>
+
                 <span className="text-sm text-slate-500">
                   {currentPage}–{totalPages || 1} of {totalPages || 1}
                 </span>
+
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -734,6 +790,7 @@ export default function BugsPage() {
                       />
                     </svg>
                   </button>
+
                   <button
                     onClick={() =>
                       setCurrentPage((p) => Math.min(totalPages, p + 1))

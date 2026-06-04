@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+
 import { FloatingInput } from "@/components/auth/FloatingInput";
 import { MailIcon, PhoneIcon, UserIcon } from "@/components/auth/icons";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { AppHeader } from "@/components/layout/AppHeader";
+
 import { getCurrentUser, type UserProfile } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 
@@ -36,7 +38,12 @@ function profileToForm(profile: UserProfile): FormState {
 
 export function ProfileSettings() {
   const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [password, setPassword] = useState(MASKED_PASSWORD);
+
   const [form, setForm] = useState<FormState>({
     fullName: "",
     phone: "",
@@ -47,9 +54,6 @@ export function ProfileSettings() {
     phone: "",
     email: "",
   });
-  const [password, setPassword] = useState(MASKED_PASSWORD);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const loadProfile = useCallback(async () => {
     const token = getAccessToken();
@@ -108,11 +112,12 @@ export function ProfileSettings() {
       <AppHeader userName={profile.full_name} avatarUrl={profile.avatar_url} />
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
-        <h1 className="text-[26px] font-bold text-[#0F172A]">Profile Settings</h1>
+        <h1 className="text-[26px] font-bold text-[#0F172A]">
+          Profile Settings
+        </h1>
 
         <div className="mt-8 flex flex-col items-center">
           {profile.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={profile.avatar_url}
               alt=""
@@ -123,9 +128,11 @@ export function ProfileSettings() {
               {initials(profile.full_name)}
             </div>
           )}
+
           <p className="mt-4 text-[20px] font-bold text-[#0F172A]">
             {profile.full_name}
           </p>
+
           <p className="mt-1 text-[15px] text-[#2B7FFF]">@{profile.username}</p>
         </div>
 
@@ -146,6 +153,7 @@ export function ProfileSettings() {
             icon={<UserIcon />}
             autoComplete="name"
           />
+
           <FloatingInput
             label="Mobile number"
             type="tel"
@@ -154,6 +162,7 @@ export function ProfileSettings() {
             icon={<PhoneIcon />}
             autoComplete="tel"
           />
+
           <FloatingInput
             label="E-mail"
             type="email"
@@ -162,6 +171,7 @@ export function ProfileSettings() {
             icon={<MailIcon />}
             autoComplete="email"
           />
+
           <PasswordInput
             label="Password"
             value={password}
@@ -177,6 +187,7 @@ export function ProfileSettings() {
             >
               Cancel
             </button>
+
             <button
               type="submit"
               className="flex-1 rounded-lg bg-[#2B7FFF] py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-[#1a6fe8]"

@@ -1,11 +1,10 @@
 from datetime import datetime
 from typing import Literal
-from pydantic import BaseModel, Field
-
-from schemas.auth import UserProfileResponse
+from pydantic import BaseModel
 
 
 class BugCreate(BaseModel):
+
     title: str
     description: str | None = None
     type: Literal["bug", "feature"]
@@ -17,6 +16,7 @@ class BugCreate(BaseModel):
 
 
 class BugResponse(BaseModel):
+
     id: int
     title: str
     description: str | None = None
@@ -31,6 +31,7 @@ class BugResponse(BaseModel):
 
 
 class BugUpdate(BaseModel):
+
     title: str | None = None
     description: str | None = None
     type: Literal["bug", "feature"] | None = None

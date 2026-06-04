@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useState, FormEvent } from "react";
+
 import { AuthSplitLayout } from "@/components/auth/AuthSplitLayout";
 import { FloatingInput } from "@/components/auth/FloatingInput";
 import { MailIcon } from "@/components/auth/icons";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PrimaryButton } from "@/components/auth/PrimaryButton";
+
 import { loginUser } from "@/lib/api";
 import { setTokens } from "@/lib/auth";
 
@@ -22,6 +24,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
     try {
       const data = await loginUser({ email, password });
       setTokens(data.access_token, data.refresh_token);
@@ -40,6 +43,7 @@ export default function LoginPage() {
         <h1 className="text-[28px] font-bold tracking-tight text-[#0F172A]">
           Login
         </h1>
+
         <p className="mt-2 text-[15px] text-[#64748B]">
           Please enter your login details
         </p>
@@ -55,6 +59,7 @@ export default function LoginPage() {
           autoComplete="email"
           required
         />
+
         <PasswordInput
           label="Password"
           value={password}
@@ -76,10 +81,7 @@ export default function LoginPage() {
 
       <p className="mt-8 text-center text-[14px] text-[#94A3B8]">
         Don&apos;t have an account?{" "}
-        <Link
-          href="/"
-          className="font-semibold text-[#2B7FFF] hover:underline"
-        >
+        <Link href="/" className="font-semibold text-[#2B7FFF] hover:underline">
           Create account
         </Link>
       </p>

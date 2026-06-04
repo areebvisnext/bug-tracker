@@ -2,7 +2,11 @@ from fastapi import HTTPException
 from supabase_auth.errors import AuthApiError
 
 _RATE_LIMIT_CODES = frozenset(
-    {"over_email_send_rate_limit", "over_request_rate_limit", "over_sms_send_rate_limit"}
+    {
+        "over_email_send_rate_limit",
+        "over_request_rate_limit",
+        "over_sms_send_rate_limit",
+    }
 )
 
 _STATUS_BY_CODE = {
@@ -17,6 +21,7 @@ _STATUS_BY_CODE = {
 
 
 def raise_auth_http_exception(error: Exception) -> None:
+
     if isinstance(error, AuthApiError):
         status = error.status or 400
         if error.code in _RATE_LIMIT_CODES:

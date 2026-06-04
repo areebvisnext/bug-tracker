@@ -132,13 +132,17 @@ export async function CreateProject(
   return res.json();
 }
 
-
 export async function GetDevs(accessToken: string): Promise<any[]> {
   const res = await fetch(`${API_BASE}/api/auth/devs`, {
     method: "GET",
     headers: authHeaders(accessToken),
   });
-  if (!res.ok) throw new Error(await parseError(res));
+
+  if (!res.ok) {
+    if (res.status === 404) return [];
+    throw new Error(await parseError(res));
+  }
+
   return res.json();
 }
 
@@ -292,4 +296,34 @@ export async function GetProjectMembers(accessToken: string | null, project_id:n
   if (!res.ok) throw new Error(await parseError(res));
   console.log(res);
   return res.json();
+}
+
+export async function RemoveProjectMember(
+  token: string | null,
+  projectId: number,
+  userId: string
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/members/${userId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to remove member ${userId}`);
+  }
+}
+
+export async function DeleteBug(bugId:number, token:string | null):Promise<void> {
+  const res = await fetch(`${API_BASE}/api/bugs/${bugId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to remove delete ${bugId}`);
+  }
 }

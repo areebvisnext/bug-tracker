@@ -30,6 +30,7 @@ export function AppHeader({ userName, avatarUrl }: AppHeaderProps) {
               ManageBug
             </span>
           </Link>
+
           <nav className="hidden items-center gap-8 sm:flex">
             <Link
               href="/projects"
@@ -83,7 +84,15 @@ export function AppHeader({ userName, avatarUrl }: AppHeaderProps) {
 
 function FolderIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      aria-hidden
+    >
       <path d="M3 7h6l2 2h10v10H3V7z" />
     </svg>
   );
@@ -91,7 +100,15 @@ function FolderIcon() {
 
 function BugIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      aria-hidden
+    >
       <ellipse cx="12" cy="14" rx="5" ry="6" />
       <path d="M12 8V5M8 6l-2-2M16 6l2-2M7 11H4M17 11h3M8 17l-2 2M16 17l2 2" />
     </svg>
@@ -100,7 +117,15 @@ function BugIcon() {
 
 function BellIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      aria-hidden
+    >
       <path d="M18 16H6l1.5-1.5V10a4.5 4.5 0 0 1 9 0v4.5L18 16z" />
       <path d="M10 18a2 2 0 0 0 4 0" />
     </svg>

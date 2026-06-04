@@ -15,6 +15,7 @@ from services.authorization import can_access_project, can_manage_project
 
 
 def _profile_for_user(user_id: str) -> UserProfileResponse | None:
+
     result = (
         supabase.table("profiles")
         .select("id, full_name, role")
@@ -62,6 +63,7 @@ def _row_to_project_response(
 
 
 def _add_project_member(db, project_id: str, user_id: str) -> None:
+
     response = (
         db.table("project_members")
         .insert({"project_id": project_id, "user_id": user_id})
@@ -73,12 +75,14 @@ def _add_project_member(db, project_id: str, user_id: str) -> None:
 
 
 def _build_project_logo_path(project_id: int, filename: str) -> str:
+
     extension = Path(filename).suffix or ""
 
     return f"projects/{project_id}/{uuid4().hex}{extension}"
 
 
 def _upload_project_logo(db, logo_file: UploadFile, project_id: int) -> str:
+
     upload_path = _build_project_logo_path(project_id, str(logo_file.filename))
     bucket = db.storage.from_(SUPABASE_STORAGE_BUCKET)
 
@@ -140,10 +144,16 @@ def create_project_service(
     access_token: str,
     logo_file: UploadFile | None = None,
 ) -> ProjectResponse:
+
     if user.role != "Manager":
         raise HTTPException(status_code=403, detail="Only managers can create projects")
 
     db = get_supabase_db(access_token)
+
+    result = db.table("projects").select("*").eq("name", body.name).limit(1).execute()
+    if result.data:
+        raise HTTPException(status_code=409, detail="Project name should be unique")
+
     payload = {
         "name": body.name,
         "description": body.description,
@@ -188,6 +198,7 @@ def create_project_service(
 
 
 def _project_ids_for_user(db, user_id: str) -> list[str]:
+
     result = (
         db.table("project_members")
         .select("project_id")
@@ -200,6 +211,7 @@ def _project_ids_for_user(db, user_id: str) -> list[str]:
 def list_projects(
     user: UserProfileResponse, access_token: str
 ) -> list[ProjectResponse]:
+
     db = get_supabase_db(access_token)
 
     project_ids = _project_ids_for_user(db, user.id)
@@ -219,6 +231,7 @@ def list_projects(
 
 
 def get_project_service(project_id: int, user: UserProfileResponse, access_token: str):
+
     db = get_supabase_db(access_token)
 
     if not can_access_project(db, user, project_id):
@@ -240,10 +253,23 @@ def update_project_service(
     user: UserProfileResponse,
     access_token: str,
 ):
+
     if user.role != "Manager":
         raise HTTPException(status_code=403, detail="Forbidden")
 
     db = get_supabase_db(access_token)
+
+    if body.name:
+        result = (
+            db.table("projects")
+            .select("*")
+            .eq("name", body.name)
+            .neq("id", project_id)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            raise HTTPException(status_code=409, detail="Project name should be unique")
 
     update_body = body.model_dump(exclude_unset=True)
     result = db.table("projects").select("*").eq("id", project_id).limit(1).execute()
@@ -268,6 +294,7 @@ def update_project_with_logo_service(
     user: UserProfileResponse,
     access_token: str,
 ):
+
     if user.role != "Manager":
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -299,6 +326,7 @@ def update_project_with_logo_service(
 def add_members_service(
     project_id: int, user_id: str, user: UserProfileResponse, access_token: str
 ):
+
     if user.role != "Manager":
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -329,7 +357,7 @@ def add_members_service(
         .execute()
     )
     if not result.data:
-        raise HTTPException(status_code=403, detail="Erro occured in db operations")
+        raise HTTPException(status_code=403, detail="Error occured in db operations")
 
     return {"message": "Member added successfully"}
 
@@ -337,18 +365,24 @@ def add_members_service(
 def remove_members_service(
     project_id: int, user_id: str, user: UserProfileResponse, access_token: str
 ):
+
     if user.role != "Manager":
         raise HTTPException(status_code=403, detail="Forbidden")
+
     db = get_supabase_db(access_token)
     result = db.table("projects").select("*").eq("id", project_id).limit(1).execute()
+
     if not result.data:
         raise HTTPException(status_code=404, detail="Project not found")
-    project = result.data[0]
-    if not can_manage_project(user, project):
+
+    if not can_manage_project(user, result.data[0]):
         raise HTTPException(status_code=403, detail="Forbidden")
+
     profile = db.table("profiles").select("id").eq("id", user_id).limit(1).execute()
+
     if not profile.data:
         raise HTTPException(status_code=404, detail="User not found")
+
     result = (
         db.table("project_members")
         .delete()
@@ -365,9 +399,12 @@ def remove_members_service(
 
 
 def get_members_service(project_id: int, user: UserProfileResponse, access_token: str):
+
     db = get_supabase_db(access_token)
+
     if not can_access_project(db, user, project_id):
         raise HTTPException(status_code=403, detail="Forbidden")
+
     result = (
         db.table("project_members")
         .select("user_id")
@@ -376,4 +413,5 @@ def get_members_service(project_id: int, user: UserProfileResponse, access_token
     )
     if not result.data:
         raise HTTPException(status_code=404, detail="Members not found")
+
     return result.data

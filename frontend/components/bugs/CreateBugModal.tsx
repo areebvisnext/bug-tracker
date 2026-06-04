@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { BugPayload, ProjectResponse, BugResponse } from "@/lib/api";
+import type {
+  BugPayload,
+  ProjectResponse,
+  BugResponse,
+  GetProjectMembers,
+} from "@/lib/api";
+import { getAccessToken } from "@/lib/auth";
 
 function getStatusOptionsForType(type: "bug" | "feature") {
   if (type === "feature") {
@@ -41,6 +47,8 @@ export default function CreateBugModal({
   const statusOptions = useMemo(() => {
     return getStatusOptionsForType(bugType);
   }, [bugType]);
+
+  useEffect(() => {}, [projectId]);
 
   useEffect(() => {
     if (!open) return;
@@ -118,11 +126,12 @@ export default function CreateBugModal({
                 onChange={(e) => setAssignedTo(e.target.value)}
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500"
               >
-                {devs.map((dev) => (
-                  <option key={dev.id} value={dev.id}>
-                    {dev.full_name}
-                  </option>
-                ))}
+                {devs &&
+                  devs.map((dev) => (
+                    <option key={dev.id} value={dev.id}>
+                      {dev.full_name}
+                    </option>
+                  ))}
               </select>
             </div>
 

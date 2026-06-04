@@ -5,3 +5,4 @@ uvicorn
 python-dotenv
 supabase
 python-multipart
+fastapi-mail

@@ -1,27 +1,28 @@
-from operator import ge
-from fastapi import APIRouter, Depends, File, Form, UploadFile, Query
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
+from schemas.projects import ProjectCreate, ProjectResponse, ProjectUpdate
+
 from services.authService import get_current_user_profile
+from services.mailService import added_to_project
 from services.projectService import (
+    add_members_service,
     create_project_service,
-    list_projects,
     get_project_service,
+    get_members_service,
+    list_projects,
     update_project_service,
     update_project_with_logo_service,
-    add_members_service,
     remove_members_service,
-    get_members_service,
 )
-
-from schemas.projects import ProjectCreate, ProjectResponse, ProjectUpdate
 
 router = APIRouter()
 bearer_scheme = HTTPBearer()
 
 
 class AddMemberRequest(BaseModel):
+
     user_id: str
 
 
@@ -30,6 +31,7 @@ def create_project(
     project: ProjectCreate,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
+
     user = get_current_user_profile(credentials.credentials)
 
     return create_project_service(
@@ -46,6 +48,7 @@ async def create_project_with_logo(
     logo_file: UploadFile | None = File(None),
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
+
     user = get_current_user_profile(credentials.credentials)
     project = ProjectCreate(name=name, description=description)
 
@@ -65,6 +68,7 @@ async def update_project_with_logo(
     logo_file: UploadFile | None = File(None),
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
+
     user = get_current_user_profile(credentials.credentials)
 
     return update_project_with_logo_service(
@@ -81,6 +85,7 @@ async def update_project_with_logo(
 def get_projects(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
+
     user = get_current_user_profile(credentials.credentials)
     return list_projects(user, credentials.credentials)
 
@@ -90,6 +95,7 @@ def get_project(
     project_id: int,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
+
     user = get_current_user_profile(credentials.credentials)
     return get_project_service(project_id, user, credentials.credentials)
 
@@ -100,20 +106,28 @@ def update_project(
     project: ProjectUpdate,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
+
     user = get_current_user_profile(credentials.credentials)
     return update_project_service(project_id, project, user, credentials.credentials)
 
 
 @router.post("/{project_id}/members")
-def add_members(
+async def add_members(
     project_id: int,
     request: AddMemberRequest,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
+
     user = get_current_user_profile(credentials.credentials)
-    return add_members_service(
+    result = add_members_service(
         project_id, request.user_id, user, credentials.credentials
     )
+
+    res = await added_to_project(
+        user, request.user_id, project_id, credentials.credentials
+    )
+
+    return result
 
 
 @router.delete("/{project_id}/members/{user_id}")
@@ -122,6 +136,7 @@ def remove_members(
     user_id: str,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
+
     user = get_current_user_profile(credentials.credentials)
     return remove_members_service(project_id, user_id, user, credentials.credentials)
 
@@ -130,5 +145,6 @@ def remove_members(
 def get_members(
     project_id: int, credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
 ):
+
     user = get_current_user_profile(credentials.credentials)
     return get_members_service(project_id, user, credentials.credentials)

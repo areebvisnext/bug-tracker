@@ -83,7 +83,6 @@ export default function ActionMenu({
             );
           })}
 
-          {/* Delete — only QA (canEdit) */}
           {canEdit && (
             <>
               <div className="my-1 border-t border-slate-100" />

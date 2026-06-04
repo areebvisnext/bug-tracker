@@ -1,6 +1,6 @@
 "use client";
 
-import { GetProjectMembers } from "@/lib/api";
+import { GetProjectMembers, RemoveProjectMember } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { useEffect, useRef, useState } from "react";
 interface User {
@@ -44,7 +44,9 @@ export default function EditProject({
   const [preview, setPreview] = useState("");
   const [selectedDevs, setSelectedDevs] = useState<Set<string>>(new Set());
   const [selectedQAs, setSelectedQAs] = useState<Set<string>>(new Set());
-  const [previousMembers, setPreviousMember] = useState<Set<string>>(new Set());
+  const [previousMembers, setPreviousMembers] = useState<Set<string>>(
+    new Set(),
+  );
   const [loading, setLoading] = useState(false);
   const [showDevDropdown, setShowDevDropdown] = useState(false);
   const [showQADropdown, setShowQADropdown] = useState(false);
@@ -60,7 +62,7 @@ export default function EditProject({
       let token = await getAccessToken();
       let members = await GetProjectMembers(token, project.id);
       const memberIdSet = new Set(members.map((member) => member.user_id));
-      setPreviousMember(memberIdSet);
+      setPreviousMembers(memberIdSet);
       const devSet: Set<string> = new Set();
       devs.forEach((dev) => {
         if (memberIdSet.has(dev.id)) {
@@ -121,29 +123,32 @@ export default function EditProject({
 
     try {
       setLoading(true);
-      const newSet = new Set(selectedDevs);
-      selectedDevs.forEach((dev) => {
-        if (previousMembers.has(dev)) {
-          newSet.delete(dev);
-        }
-      });
-      setSelectedDevs(newSet);
+      const token = await getAccessToken();
 
-      const newSetQA = new Set(selectedQAs);
-      selectedQAs.forEach((qa) => {
-        if (previousMembers.has(qa)) {
-          newSetQA.delete(qa);
-        }
-      });
-      setSelectedQAs(newSetQA);
+      const newDevs = Array.from(selectedDevs).filter(
+        (id) => !previousMembers.has(id),
+      );
+      const newQAs = Array.from(selectedQAs).filter(
+        (id) => !previousMembers.has(id),
+      );
 
-      await onSubmit({
-        name,
-        description,
-        logo,
-        selectedDevs: Array.from(selectedDevs),
-        selectedQAs: Array.from(selectedQAs),
-      });
+      const currentlySelected = new Set([...selectedDevs, ...selectedQAs]);
+      const removedMembers = Array.from(previousMembers).filter(
+        (id) => !currentlySelected.has(id),
+      );
+
+      await Promise.all([
+        onSubmit({
+          name,
+          description,
+          logo,
+          selectedDevs: newDevs,
+          selectedQAs: newQAs,
+        }),
+        ...removedMembers.map((userId) =>
+          RemoveProjectMember(token, project!.id, userId),
+        ),
+      ]);
 
       onClose();
     } catch (error) {
@@ -201,7 +206,6 @@ export default function EditProject({
           </button>
         </div>
 
-        {/* Form */}
         <div className="grid grid-cols-[1fr_150px] gap-8">
           {/* Left */}
           <div className="space-y-5">
@@ -233,7 +237,6 @@ export default function EditProject({
               />
             </div>
 
-            {/* Developers Multi-select */}
             <div ref={devDropdownRef} className="relative">
               <label className="mb-2 block text-sm font-medium text-gray-700">
                 Select Developers
@@ -290,7 +293,6 @@ export default function EditProject({
               )}
             </div>
 
-            {/* QAs Multi-select */}
             <div ref={qaDropdownRef} className="relative">
               <label className="mb-2 block text-sm font-medium text-gray-700">
                 Select QAs
@@ -348,7 +350,6 @@ export default function EditProject({
             </div>
           </div>
 
-          {/* Upload */}
           <div>
             <label className="mb-2 block text-sm font-medium text-transparent">
               Upload
@@ -378,7 +379,6 @@ export default function EditProject({
           </div>
         </div>
 
-        {/* Footer */}
         <div className="mt-8 flex gap-3">
           <button
             onClick={handleSubmit}

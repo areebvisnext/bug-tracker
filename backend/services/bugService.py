@@ -13,9 +13,11 @@ from services.authorization import (
     can_access_project,
     can_access_project_by_id,
 )
+from services.mailService import assigned_bug
 
 
 def row_to_Bug(row: dict):
+
     type_value = cast(Literal["bug", "feature"], row.get("type"))
     status_value = cast(
         Literal["new", "started", "completed", "resolved"], row.get("status")
@@ -37,12 +39,28 @@ def row_to_Bug(row: dict):
 
 
 def create_bug_service(bug: BugCreate, user: UserProfileResponse, access_token: str):
+
     db = get_supabase_db(access_token)
 
     if user.role != "QA":
         raise HTTPException(status_code=403, detail="Only a QA can create bug")
     if not can_access_project(db, user, bug.project_id):
         raise HTTPException(status_code=403, detail="Not allowed")
+
+    existing_bug = (
+        db.table("bugs")
+        .select("id")
+        .eq("project_id", bug.project_id)
+        .eq("title", bug.title)
+        .limit(1)
+        .execute()
+    )
+    if existing_bug.data:
+        raise HTTPException(
+            status_code=409,
+            detail="A bug with this title already exists in this project",
+        )
+
     if not can_access_project_by_id(db, bug.assigned_to, bug.project_id):
         raise HTTPException(status_code=403, detail="Not allowed")
 
@@ -54,6 +72,7 @@ def create_bug_service(bug: BugCreate, user: UserProfileResponse, access_token: 
 
 
 def get_bugList_service(user: UserProfileResponse, access_token: str):
+
     db = get_supabase_db(access_token)
 
     response = (
@@ -76,6 +95,7 @@ def get_bugList_service(user: UserProfileResponse, access_token: str):
 
 
 def get_bug_service(bug_id: int, user: UserProfileResponse, access_token: str):
+
     db = get_supabase_db(access_token)
 
     if not can_access_bug(db, bug_id, user.id):
@@ -89,26 +109,28 @@ def get_bug_service(bug_id: int, user: UserProfileResponse, access_token: str):
 
 
 def delete_bug_service(bug_id: int, user: UserProfileResponse, access_token: str):
+
     db = get_supabase_db(access_token)
 
     response = db.table("bugs").select("created_by").eq("id", bug_id).execute()
-    result = response.data[0]
+    result = cast(dict, response.data[0])
 
     if not response.data:
         raise HTTPException(status_code=404, detail="Bug does not exist")
-    if result != user.id:
+    if result["created_by"] != user.id:
         raise HTTPException(status_code=403, detail="Not allowed")
 
     response = db.table("bugs").delete().eq("id", bug_id).execute()
     if not response.data:
         raise HTTPException(status_code=403, detail="Error")
 
-    return "Deleted succesfully"
+    return {"response": "Deleted succesfully"}
 
 
 async def upload_screenshot_service(
     bug_id: int, file, user: UserProfileResponse, access_token: str
 ):
+
     if user.role != "QA":
         raise HTTPException(status_code=403, detail="Access denied")
 
@@ -141,19 +163,35 @@ async def upload_screenshot_service(
     return "screenshot uploaded succesfully"
 
 
-def update_bug_service(
+async def update_bug_service(
     bug_id: int, bug: BugUpdate, user: UserProfileResponse, access_token: str
 ):
+
     db = get_supabase_db(access_token)
     response = db.table("bugs").select("*").eq("id", bug_id).execute()
 
     if not response.data:
         raise HTTPException(status_code=404, detail="Not found")
+    result = cast(dict, response.data[0])
 
     if user.role == "Manager":
         raise HTTPException(status_code=403, detail="Access denied")
 
-    result = cast(dict, response.data[0])
+    if bug.title:
+        existing_bug = (
+            db.table("bugs")
+            .select("id")
+            .eq("project_id", result["project_id"])
+            .eq("title", bug.title)
+            .neq("id", bug_id)
+            .limit(1)
+            .execute()
+        )
+        if existing_bug.data:
+            raise HTTPException(
+                status_code=409,
+                detail="A bug with this title already exists in this project",
+            )
 
     bug_type = bug.type if bug.type is not None else result["type"]
 
@@ -180,10 +218,23 @@ def update_bug_service(
     payload = bug.model_dump(exclude_unset=True, mode="json")
 
     if user.role == "QA" and result["created_by"] == user.id:
-        result = db.table("bugs").update(payload).eq("id", bug_id).execute()
+        response = db.table("bugs").update(payload).eq("id", bug_id).execute()
 
-        if not result.data:
+        if (
+            payload.get("assigned_to")
+            and result["assigned_to"] != payload["assigned_to"]
+        ):
+            result = await assigned_bug(
+                result["assigned_to"],
+                result["project_id"],
+                result["title"],
+                user.full_name,
+                access_token,
+            )
+
+        if not response.data:
             raise HTTPException(status_code=403, detail="Error occurred")
+
         return {"message": "Updated Successfully"}
 
     if user.role == "Developer" and result["assigned_to"] == user.id:

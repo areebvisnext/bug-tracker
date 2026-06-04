@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+
 import { AuthSplitLayout } from "@/components/auth/AuthSplitLayout";
 import { FloatingInput } from "@/components/auth/FloatingInput";
 import { MailIcon, PhoneIcon, UserIcon } from "@/components/auth/icons";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PrimaryButton } from "@/components/auth/PrimaryButton";
 import { RoleSelect } from "@/components/auth/RoleSelect";
+
 import { signupUser, type UserRole } from "@/lib/api";
 
 const ROLES: UserRole[] = ["Manager", "QA", "Developer"];
@@ -23,6 +25,7 @@ function parseRole(value: string | null): UserRole {
 export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<UserRole>("Manager");
   const [phone, setPhone] = useState("");
@@ -82,7 +85,9 @@ export function SignupForm() {
           autoComplete="name"
           required
         />
+
         <RoleSelect value={role} onChange={setRole} />
+
         <FloatingInput
           label="Mobile number"
           type="tel"
@@ -92,6 +97,7 @@ export function SignupForm() {
           autoComplete="tel"
           required
         />
+
         <FloatingInput
           label="E-mail"
           type="email"
@@ -101,6 +107,7 @@ export function SignupForm() {
           autoComplete="email"
           required
         />
+
         <PasswordInput
           label="Password"
           value={password}
@@ -108,6 +115,7 @@ export function SignupForm() {
           autoComplete="new-password"
           required
         />
+
         <PasswordInput
           label="Confirm Password"
           value={confirmPassword}

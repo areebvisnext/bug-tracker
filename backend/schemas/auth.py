@@ -3,6 +3,7 @@ from typing import Literal
 
 
 class SignupSchema(BaseModel):
+
     full_name: str
     email: EmailStr
     phone: str = Field(..., min_length=8, max_length=20)
@@ -11,11 +12,13 @@ class SignupSchema(BaseModel):
 
 
 class LoginSchema(BaseModel):
+
     email: EmailStr
     password: str
 
 
 class UserProfileResponse(BaseModel):
+
     id: str
     email: str
     phone: str | None = None
