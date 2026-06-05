@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile, BackgroundTasks
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
@@ -115,6 +115,7 @@ def update_project(
 async def add_members(
     project_id: int,
     request: AddMemberRequest,
+    background_tasks: BackgroundTasks,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
 
@@ -123,8 +124,8 @@ async def add_members(
         project_id, request.user_id, user, credentials.credentials
     )
 
-    res = await added_to_project(
-        user, request.user_id, project_id, credentials.credentials
+    background_tasks.add_task(
+        added_to_project, user, request.user_id, project_id, credentials.credentials
     )
 
     return result

@@ -17,6 +17,7 @@ interface EditProjectModalProps {
     id: number;
     name: string;
     description: string | null;
+    created_by: any;
     logo?: string | null;
   } | null;
   onSubmit: (data: {
@@ -62,6 +63,7 @@ export default function EditProject({
       let token = await getAccessToken();
       let members = await GetProjectMembers(token, project.id);
       const memberIdSet = new Set(members.map((member) => member.user_id));
+      memberIdSet.delete(project.created_by.id);
       setPreviousMembers(memberIdSet);
       const devSet: Set<string> = new Set();
       devs.forEach((dev) => {
@@ -197,7 +199,6 @@ export default function EditProject({
         className="w-[720px] max-h-[90vh] overflow-y-auto rounded-lg bg-white p-8 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Edit Project</h2>
 
@@ -207,7 +208,6 @@ export default function EditProject({
         </div>
 
         <div className="grid grid-cols-[1fr_150px] gap-8">
-          {/* Left */}
           <div className="space-y-5">
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">

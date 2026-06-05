@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type {
+
+import {
   BugPayload,
-  ProjectResponse,
   BugResponse,
   GetProjectMembers,
+  ProjectResponse,
 } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 
@@ -39,8 +40,12 @@ export default function CreateBugModal({
   const [bugType, setBugType] = useState<"bug" | "feature">("bug");
   const [status, setStatus] = useState<BugResponse["status"]>("new");
   const [deadline, setDeadline] = useState("");
+
   const [assignedTo, setAssignedTo] = useState<string>(devs?.[0]?.id ?? "");
   const [projectId, setProjectId] = useState<number>(projects?.[0]?.id ?? 0);
+  const [projectMembers, setProjectMembers] = useState<{ user_id: string }[]>(
+    [],
+  );
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -48,10 +53,28 @@ export default function CreateBugModal({
     return getStatusOptionsForType(bugType);
   }, [bugType]);
 
-  useEffect(() => {}, [projectId]);
+  useEffect(() => {
+    if (!projectId) return;
+    const token = getAccessToken();
+    GetProjectMembers(token, projectId).then((members) => {
+      setProjectMembers(members);
+      const validDevs = devs.filter((dev) =>
+        members.some((m) => m.user_id === dev.id),
+      );
+      setAssignedTo(validDevs?.[0]?.id ?? "");
+    });
+  }, [projectId]);
+
+  const filteredDevs = useMemo(() => {
+    if (!projectMembers.length) return devs;
+    return devs.filter((dev) =>
+      projectMembers.some((m) => m.user_id === dev.id),
+    );
+  }, [devs, projectMembers]);
 
   useEffect(() => {
     if (!open) return;
+
     setTitle("");
     setDescription("");
     setBugType("bug");
@@ -72,6 +95,7 @@ export default function CreateBugModal({
 
     try {
       setLoading(true);
+
       await onSubmit(
         {
           title,
@@ -101,6 +125,7 @@ export default function CreateBugModal({
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
               Create new bug
             </p>
+
             <h2 className="mt-1 text-xl font-semibold text-slate-900">
               Add new bug
             </h2>
@@ -121,13 +146,14 @@ export default function CreateBugModal({
               <label className="text-sm font-semibold text-slate-700">
                 Assign to
               </label>
+
               <select
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500"
               >
-                {devs &&
-                  devs.map((dev) => (
+                {filteredDevs &&
+                  filteredDevs.map((dev) => (
                     <option key={dev.id} value={dev.id}>
                       {dev.full_name}
                     </option>
@@ -139,6 +165,7 @@ export default function CreateBugModal({
               <label className="text-sm font-semibold text-slate-700">
                 Add due date
               </label>
+
               <input
                 type="date"
                 value={deadline}
@@ -167,6 +194,7 @@ export default function CreateBugModal({
                 ))}
               </select>
             </div>
+
             <div>
               <label className="text-sm font-semibold text-slate-700">
                 Type

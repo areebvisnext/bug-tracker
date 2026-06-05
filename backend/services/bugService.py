@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import HTTPException
+from fastapi import HTTPException, BackgroundTasks
 from typing import Any, cast, Literal
 import uuid
 
@@ -163,8 +163,12 @@ async def upload_screenshot_service(
     return "screenshot uploaded succesfully"
 
 
-async def update_bug_service(
-    bug_id: int, bug: BugUpdate, user: UserProfileResponse, access_token: str
+def update_bug_service(
+    bug_id: int,
+    bug: BugUpdate,
+    user: UserProfileResponse,
+    access_token: str,
+    background_tasks: BackgroundTasks,
 ):
 
     db = get_supabase_db(access_token)
@@ -224,7 +228,8 @@ async def update_bug_service(
             payload.get("assigned_to")
             and result["assigned_to"] != payload["assigned_to"]
         ):
-            result = await assigned_bug(
+            background_tasks.add_task(
+                assigned_bug,
                 result["assigned_to"],
                 result["project_id"],
                 result["title"],

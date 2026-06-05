@@ -1,10 +1,11 @@
-from fastapi import HTTPException
 from fastapi_mail import FastMail, MessageSchema, MessageType
+import os
 from typing import cast
+from supabase import create_client
 
 from config import mail_conf
 
-from database.supabase import get_supabase_db, supabase
+from database.supabase import get_supabase_db
 from schemas.auth import UserProfileResponse
 
 
@@ -50,6 +51,11 @@ async def added_to_project(
     user: UserProfileResponse, user_id: str, project_id: int, access_token: str
 ):
 
+    supabase = create_client(
+        os.environ["SUPABASE_URL"],
+        os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+    )
+
     response = supabase.auth.admin.get_user_by_id(user_id)
     email = response.user.email
 
@@ -62,6 +68,11 @@ async def added_to_project(
 
 
 async def assigned_bug(user_id, project_id, bug_name, adder, access_token):
+
+    supabase = create_client(
+        os.environ["SUPABASE_URL"],
+        os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+    )
 
     response = supabase.auth.admin.get_user_by_id(user_id)
     email = response.user.email

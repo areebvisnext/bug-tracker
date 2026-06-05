@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+
 import { getAccessToken } from "@/lib/auth";
 import {
   BugResponse,
   GetBug,
-  ProjectResponse,
   UploadBugScreenshot,
   UpdateBug,
+  ProjectResponse,
+  GetProjectMembers,
 } from "@/lib/api";
 
 type UserSummary = {
@@ -84,6 +86,9 @@ export default function BugDetailModal({
   const [assignedTo, setAssignedTo] = useState("");
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [projectMembers, setProjectMembers] = useState<{ user_id: string }[]>(
+    [],
+  );
   const [saving, setSaving] = useState(false);
 
   const isQA = currentUserRole === "QA" && bug?.created_by === currentUserId;
@@ -98,6 +103,7 @@ export default function BugDetailModal({
 
   useEffect(() => {
     if (!open || !bug) return;
+
     setTitle(bug.title);
     setDescription(bug.description ?? "");
     setBugType(bug.type);
@@ -108,6 +114,24 @@ export default function BugDetailModal({
     setScreenshotFile(null);
     setSaving(false);
   }, [open, bug]);
+
+  useEffect(() => {
+    if (!open || !bug) return;
+    const token = getAccessToken();
+    GetProjectMembers(token, bug.project_id).then((members) => {
+      setProjectMembers(members);
+    });
+  }, [open, bug]);
+
+  const filteredDevs = useMemo(() => {
+    if (!projectMembers.length) return devs;
+    return devs.filter((dev) =>
+      projectMembers.some((m) => m.user_id === dev.id),
+    );
+  }, [devs, projectMembers]);
+
+  const projectName =
+    projects.find((p) => p.id === bug?.project_id)?.name ?? "Unknown";
 
   if (!open || !bug) return null;
 
@@ -184,6 +208,7 @@ export default function BugDetailModal({
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
               Bug Details
             </p>
+
             <h2 className="mt-2 text-lg font-semibold text-slate-900 line-clamp-2">
               {bug.title}
             </h2>
@@ -204,6 +229,7 @@ export default function BugDetailModal({
             >
               {statusLabels[status]}
             </span>
+
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
               {bugType === "bug" ? "Bug" : "Feature"}
             </span>
@@ -214,13 +240,14 @@ export default function BugDetailModal({
               <label className="block text-sm font-medium text-slate-700">
                 Assigned to
               </label>
+
               {canEdit ? (
                 <select
                   value={assignedTo}
                   onChange={(e) => setAssignedTo(e.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500"
                 >
-                  {devs.map((dev) => (
+                  {filteredDevs.map((dev) => (
                     <option key={dev.id} value={dev.id}>
                       {dev.full_name}
                     </option>
@@ -237,6 +264,7 @@ export default function BugDetailModal({
               <label className="block text-sm font-medium text-slate-700">
                 Due date
               </label>
+
               {canEdit ? (
                 <input
                   type="date"
@@ -257,6 +285,7 @@ export default function BugDetailModal({
               <label className="block text-sm font-medium text-slate-700">
                 Title
               </label>
+
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -265,11 +294,21 @@ export default function BugDetailModal({
             </div>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Project
+              </label>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                {projectName.charAt(0).toUpperCase() + projectName.slice(1)}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700">
                 Type
               </label>
+
               {canEdit ? (
                 <select
                   value={bugType}
@@ -292,6 +331,7 @@ export default function BugDetailModal({
               <label className="block text-sm font-medium text-slate-700">
                 Status
               </label>
+
               {canChangeStatus ? (
                 <select
                   value={status}
@@ -318,6 +358,7 @@ export default function BugDetailModal({
             <label className="block text-sm font-medium text-slate-700">
               Description
             </label>
+
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -332,6 +373,7 @@ export default function BugDetailModal({
             <label className="block text-sm font-medium text-slate-700">
               Screenshot
             </label>
+
             <label className="relative block cursor-pointer rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center transition hover:border-slate-300 hover:bg-slate-100">
               <input
                 type="file"
@@ -342,6 +384,7 @@ export default function BugDetailModal({
                   handleFileSelect(event.target.files?.[0] ?? null)
                 }
               />
+
               {screenshotUrl ? (
                 <img
                   src={screenshotUrl}
@@ -368,6 +411,7 @@ export default function BugDetailModal({
           >
             Close
           </button>
+
           {(canEdit || canChangeStatus) && (
             <button
               type="button"

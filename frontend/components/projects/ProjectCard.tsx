@@ -30,6 +30,7 @@ export default function ProjectCard(props: ProductCardProps) {
             </div>
           )}
         </div>
+
         {props.onEdit && (
           <button
             onClick={props.onEdit}

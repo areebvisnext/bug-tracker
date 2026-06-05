@@ -37,16 +37,13 @@ export function FloatingInput({
       >
         {label}
       </label>
+
       <div
         className={`flex items-center gap-3 rounded-lg border bg-[#F4F6F8] px-4 py-3.5 transition-colors ${
-          focused
-            ? "border-[#2B7FFF] bg-white"
-            : "border-transparent"
+          focused ? "border-[#2B7FFF] bg-white" : "border-transparent"
         }`}
       >
-        {icon && (
-          <span className="shrink-0 text-[#64748B]">{icon}</span>
-        )}
+        {icon && <span className="shrink-0 text-[#64748B]">{icon}</span>}
         <input
           id={id}
           type={type}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile, BackgroundTasks
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from schemas.bug import BugCreate, BugUpdate
@@ -21,20 +21,22 @@ bearer_scheme = HTTPBearer()
 
 @router.post("/")
 async def create_bug(
-    bug: BugCreate, credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
+    bug: BugCreate,
+    background_tasks: BackgroundTasks,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
 
     user = get_current_user_profile(credentials.credentials)
-
     result = create_bug_service(bug, user, credentials.credentials)
-    res = await assigned_bug(
+
+    background_tasks.add_task(
+        assigned_bug,
         bug.assigned_to,
         bug.project_id,
         bug.title,
         user.full_name,
         credentials.credentials,
     )
-
     return result
 
 
@@ -81,10 +83,13 @@ async def upload_screenshot(
 async def update_bug(
     bug_id: int,
     bug: BugUpdate,
+    background_tasks: BackgroundTasks,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
 
     user = get_current_user_profile(credentials.credentials)
-    result = await update_bug_service(bug_id, bug, user, credentials.credentials)
+    result = update_bug_service(
+        bug_id, bug, user, credentials.credentials, background_tasks
+    )
 
     return result

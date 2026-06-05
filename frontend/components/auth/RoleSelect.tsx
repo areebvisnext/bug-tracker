@@ -28,11 +28,10 @@ export function RoleSelect({ value, onChange }: RoleSelectProps) {
       >
         Role
       </label>
+
       <div
         className={`flex cursor-pointer items-center gap-3 rounded-lg border bg-[#F4F6F8] px-4 py-3.5 transition-colors ${
-          focused
-            ? "border-[#2B7FFF] bg-white"
-            : "border-transparent"
+          focused ? "border-[#2B7FFF] bg-white" : "border-transparent"
         }`}
       >
         <UserIcon className="shrink-0 text-[#64748B]" />

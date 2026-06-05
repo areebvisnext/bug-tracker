@@ -82,7 +82,6 @@ export default function AddProject({
         className="w-[720px] rounded-lg bg-white p-8 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Add new Project</h2>
 
@@ -91,9 +90,7 @@ export default function AddProject({
           </button>
         </div>
 
-        {/* Form */}
         <div className="grid grid-cols-[1fr_150px] gap-8">
-          {/* Left */}
           <div className="space-y-5">
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -124,7 +121,6 @@ export default function AddProject({
             </div>
           </div>
 
-          {/* Upload */}
           <div>
             <label className="mb-2 block text-sm font-medium text-transparent">
               Upload
@@ -154,7 +150,6 @@ export default function AddProject({
           </div>
         </div>
 
-        {/* Footer */}
         <div className="mt-8 flex gap-3">
           <button
             onClick={handleSubmit}

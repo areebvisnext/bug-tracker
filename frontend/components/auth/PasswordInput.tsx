@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+
 import { EyeIcon, EyeOffIcon, LockIcon } from "./icons";
 
 type PasswordInputProps = {
@@ -35,11 +36,10 @@ export function PasswordInput({
       >
         {label}
       </label>
+
       <div
         className={`flex items-center gap-3 rounded-lg border bg-[#F4F6F8] px-4 py-3.5 transition-colors ${
-          focused
-            ? "border-[#2B7FFF] bg-white"
-            : "border-transparent"
+          focused ? "border-[#2B7FFF] bg-white" : "border-transparent"
         }`}
       >
         <LockIcon className="shrink-0 text-[#64748B]" />
@@ -54,6 +54,7 @@ export function PasswordInput({
           onBlur={() => setFocused(false)}
           className="w-full bg-transparent text-[15px] text-[#0F172A] outline-none placeholder:text-transparent"
         />
+
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
