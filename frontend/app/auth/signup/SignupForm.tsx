@@ -84,6 +84,7 @@ export function SignupForm() {
           icon={<UserIcon />}
           autoComplete="name"
           required
+          disabled={false}
         />
 
         <RoleSelect value={role} onChange={setRole} />
@@ -96,6 +97,7 @@ export function SignupForm() {
           icon={<PhoneIcon />}
           autoComplete="tel"
           required
+          disabled={false}
         />
 
         <FloatingInput
@@ -106,6 +108,7 @@ export function SignupForm() {
           icon={<MailIcon />}
           autoComplete="email"
           required
+          disabled={false}
         />
 
         <PasswordInput

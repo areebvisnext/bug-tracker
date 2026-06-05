@@ -152,6 +152,7 @@ export function ProfileSettings() {
             onChange={(v) => setForm((f) => ({ ...f, fullName: v }))}
             icon={<UserIcon />}
             autoComplete="name"
+            disabled={true}
           />
 
           <FloatingInput
@@ -161,6 +162,7 @@ export function ProfileSettings() {
             onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
             icon={<PhoneIcon />}
             autoComplete="tel"
+            disabled={true}
           />
 
           <FloatingInput
@@ -170,6 +172,7 @@ export function ProfileSettings() {
             onChange={(v) => setForm((f) => ({ ...f, email: v }))}
             icon={<MailIcon />}
             autoComplete="email"
+            disabled={true}
           />
 
           <PasswordInput
@@ -179,7 +182,7 @@ export function ProfileSettings() {
             autoComplete="current-password"
           />
 
-          <div className="mt-2 flex gap-4">
+          {/* <div className="mt-2 flex gap-4">
             <button
               type="button"
               onClick={handleCancel}
@@ -194,7 +197,7 @@ export function ProfileSettings() {
             >
               Confirm
             </button>
-          </div>
+          </div> */}
         </form>
       </main>
     </div>

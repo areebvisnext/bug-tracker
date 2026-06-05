@@ -10,6 +10,7 @@ type FloatingInputProps = {
   icon?: React.ReactNode;
   autoComplete?: string;
   required?: boolean;
+  disabled: boolean | undefined;
 };
 
 export function FloatingInput({
@@ -20,6 +21,7 @@ export function FloatingInput({
   icon,
   autoComplete,
   required,
+  disabled = true,
 }: FloatingInputProps) {
   const id = useId();
   const [focused, setFocused] = useState(false);
@@ -45,6 +47,7 @@ export function FloatingInput({
       >
         {icon && <span className="shrink-0 text-[#64748B]">{icon}</span>}
         <input
+          disabled={disabled}
           id={id}
           type={type}
           value={value}

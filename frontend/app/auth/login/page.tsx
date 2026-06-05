@@ -58,6 +58,7 @@ export default function LoginPage() {
           icon={<MailIcon />}
           autoComplete="email"
           required
+          disabled={false}
         />
 
         <PasswordInput
