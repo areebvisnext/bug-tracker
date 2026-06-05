@@ -105,3 +105,13 @@ def get_devs_service(user: UserProfileResponse, access_token: str):
 
         res = db.table("profiles").select("*").eq("role", "Developer").execute()
         return res.data
+
+
+def get_users_service(user: UserProfileResponse, access_token: str):
+
+    if user:
+        db = get_supabase_db(access_token)
+
+        users = ["Developer", "QA"]
+        res = db.table("profiles").select("*").in_("role", users).execute()
+        return res.data

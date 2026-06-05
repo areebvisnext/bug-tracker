@@ -15,6 +15,7 @@ import {
   AddMembersToProject,
   GetDevs,
   GetQA,
+  GetUsers,
   getCurrentUser,
 } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
@@ -59,12 +60,24 @@ export default function Projects() {
         const userData = await getCurrentUser(token);
         setCurrentUser(userData as User);
 
-        const [projectsData, devsData, qasData] = await Promise.all([
+        const [projectsData, usersdata] = await Promise.all([
           GetProjects(token),
-          GetDevs(token),
-          GetQA(token),
+          GetUsers(token),
         ]);
 
+        console.log("data from get users", usersdata);
+        let devsData = [];
+        let qasData = [];
+
+        for (let user of usersdata) {
+          if (user.role == "Developer") {
+            devsData.push(user);
+          } else if (user.role == "QA") {
+            qasData.push(user);
+          }
+        }
+        console.log("data from get devs", devsData);
+        console.log("data from get qas", qasData);
         setProjects(projectsData);
         setDevs(devsData);
         setQas(qasData);

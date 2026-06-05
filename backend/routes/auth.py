@@ -9,11 +9,13 @@ from services.authService import (
     get_current_user_profile,
     get_qa_service,
     get_devs_service,
+    get_users_service,
     login_user,
     logout_user,
     signup_user,
 )
 from supabase_auth.errors import AuthApiError
+
 
 router = APIRouter()
 bearer_scheme = HTTPBearer()
@@ -21,7 +23,6 @@ bearer_scheme = HTTPBearer()
 
 @router.post("/signup")
 def signup(data: SignupSchema):
-
     try:
         return signup_user(data)
     except AuthApiError as e:
@@ -32,7 +33,6 @@ def signup(data: SignupSchema):
 
 @router.post("/login")
 def login(data: LoginSchema):
-
     try:
         response = login_user(data)
         if not response.session:
@@ -50,7 +50,6 @@ def login(data: LoginSchema):
 
 @router.get("/me", response_model=UserProfileResponse)
 def get_me(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
-
     try:
         return get_current_user_profile(credentials.credentials)
     except AuthApiError as e:
@@ -64,7 +63,6 @@ def logout(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     scope: Literal["global", "local", "others"] = Query(default="global"),
 ):
-
     try:
         logout_user(credentials.credentials, scope=scope)
     except AuthApiError as e:
@@ -75,15 +73,19 @@ def logout(
     return {"message": "Logged out successfully"}
 
 
+@router.get("/devs")
+def get_devs(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    user = get_current_user_profile(credentials.credentials)
+    return get_devs_service(user, credentials.credentials)
+
+
 @router.get("/qa")
 def get_qa(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
-
     user = get_current_user_profile(credentials.credentials)
     return get_qa_service(user, credentials.credentials)
 
 
-@router.get("/devs")
-def get_devs(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
-
+@router.get("/users")
+def get_users(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
     user = get_current_user_profile(credentials.credentials)
-    return get_devs_service(user, credentials.credentials)
+    return get_users_service(user, credentials.credentials)

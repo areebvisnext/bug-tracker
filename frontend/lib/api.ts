@@ -207,6 +207,21 @@ export async function GetQA(accessToken: string): Promise<any[]> {
   return res.json();
 }
 
+export async function GetUsers(accessToken: string): Promise<any[]> {
+
+  const res = await fetch(`${API_BASE}/api/auth/users`, {
+    method: "GET",
+    headers: authHeaders(accessToken),
+  });
+
+  if (!res.ok) {
+    if (res.status === 404) return [];
+    throw new Error(await parseError(res));
+  }
+  console.log("response",res)
+  return res.json();
+}
+
 
 export async function GetBugs(accessToken: string): Promise<BugResponse[]> {
 
