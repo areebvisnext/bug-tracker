@@ -1,5 +1,6 @@
 from fastapi import HTTPException, UploadFile, responses
-import imghdr
+from io import BytesIO
+from PIL import Image
 from postgrest.exceptions import APIError
 from pathlib import Path
 from typing import cast
@@ -90,7 +91,11 @@ def _upload_project_logo(db, logo_file: UploadFile, project_id: int) -> str:
     data = logo_file.file.read()
 
     content_type = (logo_file.content_type or "").lower()
-    detected = imghdr.what(None, data)
+    try:
+        img = Image.open(BytesIO(data))
+        detected = img.format.lower() if img.format else None
+    except Exception:
+        detected = None
 
     if not detected:
         ext = Path(str(logo_file.filename)).suffix.lower()

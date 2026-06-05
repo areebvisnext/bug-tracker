@@ -44,6 +44,7 @@ def create_bug_service(bug: BugCreate, user: UserProfileResponse, access_token: 
 
     if user.role != "QA":
         raise HTTPException(status_code=403, detail="Only a QA can create bug")
+
     if not can_access_project(db, user, bug.project_id):
         raise HTTPException(status_code=403, detail="Not allowed")
 
@@ -63,7 +64,6 @@ def create_bug_service(bug: BugCreate, user: UserProfileResponse, access_token: 
 
     if not can_access_project_by_id(db, bug.assigned_to, bug.project_id):
         raise HTTPException(status_code=403, detail="Not allowed")
-
     payload = bug.model_dump(mode="json")
     payload["created_by"] = user.id
 
@@ -113,10 +113,11 @@ def delete_bug_service(bug_id: int, user: UserProfileResponse, access_token: str
     db = get_supabase_db(access_token)
 
     response = db.table("bugs").select("created_by").eq("id", bug_id).execute()
-    result = cast(dict, response.data[0])
 
     if not response.data:
         raise HTTPException(status_code=404, detail="Bug does not exist")
+
+    result = cast(dict, response.data[0])
     if result["created_by"] != user.id:
         raise HTTPException(status_code=403, detail="Not allowed")
 
