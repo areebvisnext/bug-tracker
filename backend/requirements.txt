@@ -1,9 +1,13 @@
 fastapi
-pydantic[email]
-email-validator
 uvicorn
+sqlalchemy
+alembic
+psycopg2-binary
+pydantic-settings
 python-dotenv
-supabase
 python-multipart
 fastapi-mail
+supabase
+PyJWT
+email-validator
 pillow

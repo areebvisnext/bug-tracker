@@ -17,12 +17,12 @@ from services.projectService import (
     remove_members_service,
 )
 
+
 router = APIRouter()
 bearer_scheme = HTTPBearer()
 
 
 class AddMemberRequest(BaseModel):
-
     user_id: str
 
 
@@ -31,7 +31,6 @@ def create_project(
     project: ProjectCreate,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
 
     return create_project_service(
@@ -48,7 +47,6 @@ async def create_project_with_logo(
     logo_file: UploadFile | None = File(None),
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
     project = ProjectCreate(name=name, description=description)
 
@@ -68,7 +66,6 @@ async def update_project_with_logo(
     logo_file: UploadFile | None = File(None),
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
 
     return update_project_with_logo_service(
@@ -85,7 +82,6 @@ async def update_project_with_logo(
 def get_projects(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
     return list_projects(user, credentials.credentials)
 
@@ -95,7 +91,6 @@ def get_project(
     project_id: int,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
     return get_project_service(project_id, user, credentials.credentials)
 
@@ -106,7 +101,6 @@ def update_project(
     project: ProjectUpdate,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
     return update_project_service(project_id, project, user, credentials.credentials)
 
@@ -118,7 +112,6 @@ async def add_members(
     background_tasks: BackgroundTasks,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
     result = add_members_service(
         project_id, request.user_id, user, credentials.credentials
@@ -137,8 +130,8 @@ def remove_members(
     user_id: str,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
+
     return remove_members_service(project_id, user_id, user, credentials.credentials)
 
 
@@ -146,6 +139,6 @@ def remove_members(
 def get_members(
     project_id: int, credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
 ):
-
     user = get_current_user_profile(credentials.credentials)
+
     return get_members_service(project_id, user, credentials.credentials)

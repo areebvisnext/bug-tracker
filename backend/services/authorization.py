@@ -1,46 +1,38 @@
 from fastapi import HTTPException
+from typing import cast
+from sqlalchemy.orm import Session
+
+from models.bug import Bug
+from models.project import ProjectMember
 
 from schemas.auth import UserProfileResponse
 
 
-def can_access_project_by_id(db, user_id: str, project_id) -> bool:
-
-    result = (
-        db.table("project_members")
-        .select("*")
-        .eq("project_id", project_id)
-        .eq("user_id", user_id)
-        .limit(1)
-        .execute()
+def can_access_project_by_id(db: Session, user_id: str, project_id: int) -> bool:
+    member = (
+        db.query(ProjectMember)
+        .filter(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == user_id,
+        )
+        .first()
     )
 
-    if not result.data:
+    if not member:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return True
 
 
-def can_access_project(db, user: UserProfileResponse, project_id) -> bool:
-
-    result = (
-        db.table("project_members")
-        .select("*")
-        .eq("project_id", project_id)
-        .eq("user_id", user.id)
-        .limit(1)
-        .execute()
-    )
-
-    if not result.data:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    return True
+def can_access_project(db: Session, user: UserProfileResponse, project_id: int) -> bool:
+    return can_access_project_by_id(db, user.id, project_id)
 
 
-def can_manage_project(user: UserProfileResponse, project):
+def can_manage_project(user: UserProfileResponse, project) -> bool:
+    creator_id = project.created_by
 
     if user.role == "Manager":
-        if project["created_by"] != user.id:
+        if str(creator_id) != user.id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
         return True
@@ -48,12 +40,10 @@ def can_manage_project(user: UserProfileResponse, project):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
-def can_access_bug(db, bug_id: int, user_id: str):
+def can_access_bug(db: Session, bug_id: int, user_id: str) -> bool:
+    bug = db.query(Bug).filter(Bug.id == bug_id).first()
 
-    response = db.table("bugs").select("project_id").eq("id", bug_id).limit(1).execute()
-
-    if not response.data:
+    if not bug:
         raise HTTPException(status_code=404, detail="Bug not found")
 
-    project_id = response.data[0]["project_id"]
-    return can_access_project_by_id(db, user_id, project_id)
+    return can_access_project_by_id(db, user_id, cast(int, bug.project_id))

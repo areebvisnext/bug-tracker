@@ -25,7 +25,6 @@ async def create_bug(
     background_tasks: BackgroundTasks,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
     result = create_bug_service(bug, user, credentials.credentials)
 
@@ -42,8 +41,8 @@ async def create_bug(
 
 @router.get("/")
 def get_bugList(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
-
     user = get_current_user_profile(credentials.credentials)
+
     return get_bugList_service(user, credentials.credentials)
 
 
@@ -51,8 +50,8 @@ def get_bugList(credentials: HTTPAuthorizationCredentials = Depends(bearer_schem
 def get_bug(
     bug_id: int, credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
 ):
-
     user = get_current_user_profile(credentials.credentials)
+
     return get_bug_service(bug_id, user, credentials.credentials)
 
 
@@ -60,8 +59,8 @@ def get_bug(
 def delete_bug(
     bug_id: int, credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
 ):
-
     user = get_current_user_profile(credentials.credentials)
+
     return delete_bug_service(bug_id, user, credentials.credentials)
 
 
@@ -71,11 +70,11 @@ async def upload_screenshot(
     file: UploadFile = File(...),
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
     result = await upload_screenshot_service(
         bug_id, file, user, credentials.credentials
     )
+
     return result
 
 
@@ -86,7 +85,6 @@ async def update_bug(
     background_tasks: BackgroundTasks,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
-
     user = get_current_user_profile(credentials.credentials)
     result = update_bug_service(
         bug_id, bug, user, credentials.credentials, background_tasks

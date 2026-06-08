@@ -1,12 +1,13 @@
 from fastapi import HTTPException
-from typing import Any, cast, Literal
+from typing import cast, Literal
 
-from database.supabase import get_supabase_db, supabase, supabase_admin
+from database.supabase import supabase, supabase_admin
+from database.orm import SessionLocal
+from models.profile import Profile
 from schemas.auth import UserProfileResponse
 
 
 def signup_user(data):
-
     phone = data.phone.strip().replace(" ", "")
 
     auth_response = supabase.auth.sign_up(
@@ -31,15 +32,15 @@ def signup_user(data):
     if phone and supabase_admin and not user.phone:
         supabase_admin.auth.admin.update_user_by_id(user.id, {"phone": phone})
 
-    supabase.table("profiles").insert(
-        {"id": user.id, "full_name": data.full_name, "role": data.role}
-    ).execute()
+    with SessionLocal() as db:
+        new_profile = Profile(id=user.id, full_name=data.full_name, role=data.role)
+        db.add(new_profile)
+        db.commit()
 
     return {"message": "User created successfully"}
 
 
 def login_user(data):
-
     response = supabase.auth.sign_in_with_password(
         {"email": data.email, "password": data.password}
     )
@@ -56,26 +57,23 @@ def logout_user(
 
 
 def get_current_user_profile(access_token: str) -> UserProfileResponse:
-
     auth_response = supabase.auth.get_user(jwt=access_token)
 
     if not auth_response:
         raise HTTPException(status_code=404, detail="Current user not found")
     user = auth_response.user
 
-    profile_row: dict[str, Any] | None = None
-    profile_result = (
-        supabase.table("profiles").select("full_name, role").eq("id", user.id).execute()
-    )
+    full_name = ""
+    role = ""
 
-    if profile_result.data:
-        profile_row = cast(dict[str, Any], profile_result.data[0])
+    with SessionLocal() as db:
+        profile = db.query(Profile).filter(Profile.id == user.id).first()
+        if profile:
+            full_name = profile.full_name
+            role = profile.role
 
     metadata = user.user_metadata or {}
-    full_name = (
-        profile_row.get("full_name") if profile_row else metadata.get("full_name") or ""
-    )
-    role = profile_row.get("role") if profile_row else metadata.get("role") or ""
+
     email = user.email or ""
     phone = user.phone or metadata.get("phone")
 
@@ -90,28 +88,33 @@ def get_current_user_profile(access_token: str) -> UserProfileResponse:
 
 
 def get_qa_service(user: UserProfileResponse, access_token: str):
-
     if user:
-        db = get_supabase_db(access_token)
+        with SessionLocal() as db:
+            qas = db.query(Profile).filter(Profile.role == "QA").all()
 
-        res = db.table("profiles").select("*").eq("role", "QA").execute()
-        return res.data
+            return [
+                {"id": str(q.id), "full_name": q.full_name, "role": q.role} for q in qas
+            ]
 
 
 def get_devs_service(user: UserProfileResponse, access_token: str):
-
     if user:
-        db = get_supabase_db(access_token)
+        with SessionLocal() as db:
+            devs = db.query(Profile).filter(Profile.role == "Developer").all()
 
-        res = db.table("profiles").select("*").eq("role", "Developer").execute()
-        return res.data
+            return [
+                {"id": str(d.id), "full_name": d.full_name, "role": d.role}
+                for d in devs
+            ]
 
 
 def get_users_service(user: UserProfileResponse, access_token: str):
-
     if user:
-        db = get_supabase_db(access_token)
+        with SessionLocal() as db:
+            users = ["Developer", "QA"]
+            profiles = db.query(Profile).filter(Profile.role.in_(users)).all()
 
-        users = ["Developer", "QA"]
-        res = db.table("profiles").select("*").in_("role", users).execute()
-        return res.data
+            return [
+                {"id": str(p.id), "full_name": p.full_name, "role": p.role}
+                for p in profiles
+            ]
