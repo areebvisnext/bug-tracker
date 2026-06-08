@@ -65,7 +65,6 @@ export default function Projects() {
           GetUsers(token),
         ]);
 
-        console.log("data from get users", usersdata);
         let devsData = [];
         let qasData = [];
 
@@ -76,8 +75,7 @@ export default function Projects() {
             qasData.push(user);
           }
         }
-        console.log("data from get devs", devsData);
-        console.log("data from get qas", qasData);
+
         setProjects(projectsData);
         setDevs(devsData);
         setQas(qasData);
