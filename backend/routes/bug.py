@@ -3,6 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from schemas.bug import BugCreate, BugUpdate
 
+from services.authorization import require_qa
 from services.authService import get_current_user_profile
 from services.bugService import (
     create_bug_service,
@@ -24,8 +25,8 @@ async def create_bug(
     bug: BugCreate,
     background_tasks: BackgroundTasks,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user=Depends(require_qa),
 ):
-    user = get_current_user_profile(credentials.credentials)
     result = create_bug_service(bug, user, credentials.credentials)
 
     background_tasks.add_task(
@@ -57,9 +58,10 @@ def get_bug(
 
 @router.delete("/{bug_id}")
 def delete_bug(
-    bug_id: int, credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
+    bug_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user=Depends(require_qa),
 ):
-    user = get_current_user_profile(credentials.credentials)
 
     return delete_bug_service(bug_id, user, credentials.credentials)
 
@@ -69,8 +71,8 @@ async def upload_screenshot(
     bug_id: int,
     file: UploadFile = File(...),
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user=Depends(require_qa),
 ):
-    user = get_current_user_profile(credentials.credentials)
     result = await upload_screenshot_service(
         bug_id, file, user, credentials.credentials
     )
