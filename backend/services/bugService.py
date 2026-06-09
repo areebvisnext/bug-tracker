@@ -34,8 +34,6 @@ def _bug_model_to_response(bug: Bug) -> BugResponse:
 
 
 def create_bug_service(bug: BugCreate, user: UserProfileResponse, access_token: str):
-    if user.role != "QA":
-        raise HTTPException(status_code=403, detail="Only a QA can create bug")
 
     with SessionLocal() as db:
         if not can_access_project(db, user, bug.project_id):

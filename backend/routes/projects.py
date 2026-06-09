@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from schemas.projects import ProjectCreate, ProjectResponse, ProjectUpdate
 
+from services.authorization import require_manager
 from services.authService import get_current_user_profile
 from services.mailService import added_to_project
 from services.projectService import (
@@ -30,9 +31,8 @@ class AddMemberRequest(BaseModel):
 def create_project(
     project: ProjectCreate,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user=Depends(require_manager),
 ):
-    user = get_current_user_profile(credentials.credentials)
-
     return create_project_service(
         project,
         user,
@@ -46,8 +46,8 @@ async def create_project_with_logo(
     description: str | None = Form(None),
     logo_file: UploadFile | None = File(None),
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user=Depends(require_manager),
 ):
-    user = get_current_user_profile(credentials.credentials)
     project = ProjectCreate(name=name, description=description)
 
     return create_project_service(
@@ -65,8 +65,8 @@ async def update_project_with_logo(
     description: str | None = Form(None),
     logo_file: UploadFile | None = File(None),
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user=Depends(require_manager),
 ):
-    user = get_current_user_profile(credentials.credentials)
 
     return update_project_with_logo_service(
         project_id,
@@ -100,8 +100,8 @@ def update_project(
     project_id: int,
     project: ProjectUpdate,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user=Depends(require_manager),
 ):
-    user = get_current_user_profile(credentials.credentials)
     return update_project_service(project_id, project, user, credentials.credentials)
 
 
@@ -111,8 +111,8 @@ async def add_members(
     request: AddMemberRequest,
     background_tasks: BackgroundTasks,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user=Depends(require_manager),
 ):
-    user = get_current_user_profile(credentials.credentials)
     result = add_members_service(
         project_id, request.user_id, user, credentials.credentials
     )
@@ -129,8 +129,8 @@ def remove_members(
     project_id: int,
     user_id: str,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    user=Depends(require_manager),
 ):
-    user = get_current_user_profile(credentials.credentials)
 
     return remove_members_service(project_id, user_id, user, credentials.credentials)
 

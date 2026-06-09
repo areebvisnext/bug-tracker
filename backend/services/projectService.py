@@ -130,8 +130,6 @@ def create_project_service(
     access_token: str,
     logo_file: UploadFile | None = None,
 ) -> ProjectResponse:
-    if user.role != "Manager":
-        raise HTTPException(status_code=403, detail="Only managers can create projects")
 
     with SessionLocal() as db:
         existing = db.query(Project).filter(Project.name == body.name).first()
@@ -213,8 +211,6 @@ def update_project_service(
     user: UserProfileResponse,
     access_token: str,
 ):
-    if user.role != "Manager":
-        raise HTTPException(status_code=403, detail="Forbidden")
 
     with SessionLocal() as db:
         if body.name:
@@ -236,7 +232,6 @@ def update_project_service(
         if not can_manage_project(user, project):
             raise HTTPException(status_code=403, detail="Forbidden")
 
-        # Apply updates
         update_data = body.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(project, key, value)
@@ -254,8 +249,6 @@ def update_project_with_logo_service(
     user: UserProfileResponse,
     access_token: str,
 ):
-    if user.role != "Manager":
-        raise HTTPException(status_code=403, detail="Forbidden")
 
     storagedb = get_supabase_db(access_token)
 
@@ -285,8 +278,6 @@ def update_project_with_logo_service(
 def add_members_service(
     project_id: int, user_id: str, user: UserProfileResponse, access_token: str
 ):
-    if user.role != "Manager":
-        raise HTTPException(status_code=403, detail="Forbidden")
 
     with SessionLocal() as db:
         project = db.query(Project).filter(Project.id == project_id).first()
@@ -321,8 +312,6 @@ def add_members_service(
 def remove_members_service(
     project_id: int, user_id: str, user: UserProfileResponse, access_token: str
 ):
-    if user.role != "Manager":
-        raise HTTPException(status_code=403, detail="Forbidden")
 
     with SessionLocal() as db:
         project = db.query(Project).filter(Project.id == project_id).first()
