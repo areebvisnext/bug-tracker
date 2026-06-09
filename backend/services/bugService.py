@@ -23,6 +23,7 @@ def _bug_model_to_response(bug: Bug) -> BugResponse:
         description=cast(str, bug.description),
         type=cast(Literal["bug", "feature"], bug.type),
         status=cast(Literal["new", "started", "completed", "resolved"], bug.status),
+        priority=cast(Literal["low", "medium", "high"], bug.priority),
         deadline=cast(datetime, bug.deadline),
         screenshot=cast(str, bug.screenshot),
         project_id=cast(int, bug.project_id),
@@ -59,6 +60,7 @@ def create_bug_service(bug: BugCreate, user: UserProfileResponse, access_token: 
             description=bug.description,
             type=bug.type,
             status=bug.status,
+            priority=bug.priority,
             deadline=bug.deadline,
             screenshot=bug.screenshot,
             project_id=bug.project_id,
@@ -169,9 +171,6 @@ def update_bug_service(
         if not bug_db:
             raise HTTPException(status_code=404, detail="Not found")
 
-        if user.role == "Manager":
-            raise HTTPException(status_code=403, detail="Access denied")
-
         if bug.title:
             existing_bug = (
                 db.query(Bug)
@@ -232,6 +231,12 @@ def update_bug_service(
                 )
 
             return {"message": "Updated Successfully"}
+
+        if user.role == "Manager":
+            if "priority" in payload:
+                bug_db.priority = payload["priority"]
+                db.commit()
+                return {"message": "Updated Successfully"}
 
         if user.role == "Developer" and str(bug_db.assigned_to) == user.id:
             if "status" not in payload:

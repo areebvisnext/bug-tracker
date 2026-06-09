@@ -82,6 +82,7 @@ export default function BugDetailModal({
   const [description, setDescription] = useState("");
   const [bugType, setBugType] = useState<BugResponse["type"]>("bug");
   const [status, setStatus] = useState<BugResponse["status"]>("new");
+  const [priority, setPriority] = useState<BugResponse["priority"]>("medium");
   const [deadline, setDeadline] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
@@ -94,12 +95,16 @@ export default function BugDetailModal({
   const isQA = currentUserRole === "QA" && bug?.created_by === currentUserId;
   const isDeveloper =
     currentUserRole === "Developer" && bug?.assigned_to === currentUserId;
+  const isManager = currentUserRole === "Manager";
   const canEdit = isQA;
   const canChangeStatus = isQA || isDeveloper;
+  const canEditPriority = isQA || isManager;
 
   const statusOptions = useMemo(() => {
     return getStatusOptionsForType(bugType);
   }, [bugType]);
+
+  const priorityOptions = ["low", "medium", "high"];
 
   useEffect(() => {
     if (!open || !bug) return;
@@ -108,6 +113,7 @@ export default function BugDetailModal({
     setDescription(bug.description ?? "");
     setBugType(bug.type);
     setStatus(bug.status);
+    setPriority(bug.priority);
     setDeadline(formatDateForInput(bug.deadline));
     setAssignedTo(bug.assigned_to);
     setScreenshotUrl(bug.screenshot ?? null);
@@ -166,6 +172,10 @@ export default function BugDetailModal({
 
       if (canChangeStatus && status !== bug.status) {
         payload.status = status;
+      }
+
+      if (canEditPriority) {
+        payload.priority = priority;
       }
 
       await UpdateBug(bug.id, payload, accessToken);
@@ -294,7 +304,7 @@ export default function BugDetailModal({
             </div>
           )}
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700">
                 Project
@@ -349,6 +359,32 @@ export default function BugDetailModal({
               ) : (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
                   {statusLabels[status]}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Priority
+              </label>
+
+              {canEditPriority ? (
+                <select
+                  value={priority}
+                  onChange={(e) =>
+                    setPriority(e.target.value as BugResponse["priority"])
+                  }
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500"
+                >
+                  {priorityOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  {priority}
                 </div>
               )}
             </div>
@@ -412,7 +448,7 @@ export default function BugDetailModal({
             Close
           </button>
 
-          {(canEdit || canChangeStatus) && (
+          {(canEdit || canChangeStatus || canEditPriority) && (
             <button
               type="button"
               disabled={saving}

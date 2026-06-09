@@ -22,6 +22,8 @@ class Bug(Base):
 
     status: Mapped[str] = mapped_column(String, nullable=False)
 
+    priority: Mapped[str] = mapped_column(String, nullable=False, default="medium")
+
     deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     screenshot: Mapped[str | None] = mapped_column(String, nullable=True)

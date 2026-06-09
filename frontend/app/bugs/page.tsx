@@ -22,6 +22,7 @@ import {
   UploadBugScreenshot,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { getPriority } from "node:os";
 
 type ViewMode = "list" | "cards";
 
@@ -48,6 +49,7 @@ export default function BugsPage() {
   const [projectFilter, setProjectFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
 
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -133,13 +135,16 @@ export default function BugsPage() {
 
       const matchesStatus = !statusFilter || bug.status === statusFilter;
       const matchesType = !typeFilter || bug.type === typeFilter;
+      const matchesPriority =
+        !priorityFilter || bug.priority === priorityFilter;
 
       return (
         matchesSearch &&
         matchesAssigned &&
         matchesProject &&
         matchesStatus &&
-        matchesType
+        matchesType &&
+        matchesPriority
       );
     });
   }, [
@@ -149,6 +154,7 @@ export default function BugsPage() {
     projectFilter,
     statusFilter,
     typeFilter,
+    priorityFilter,
     assignedToMap,
   ]);
 
@@ -160,6 +166,7 @@ export default function BugsPage() {
     projectFilter,
     statusFilter,
     typeFilter,
+    priorityFilter,
     rowsPerPage,
   ]);
 
@@ -168,6 +175,32 @@ export default function BugsPage() {
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage,
   );
+
+  function getPriorityStyle(priority: string): {
+    dot: string;
+    badge: string;
+    text: string;
+  } {
+    if (priority === "low") {
+      return {
+        dot: "bg-green-500",
+        badge: "bg-green-50 border border-green-200",
+        text: "text-green-600",
+      };
+    }
+    if (priority === "medium") {
+      return {
+        dot: "bg-yellow-500",
+        badge: "bg-yellow-50 border border-yellow-200",
+        text: "text-yellow-600",
+      };
+    }
+    return {
+      dot: "bg-red-500",
+      badge: "bg-red-50 border border-red-200",
+      text: "text-red-600",
+    };
+  }
 
   function getStatusStyle(status: string): {
     dot: string;
@@ -276,6 +309,7 @@ export default function BugsPage() {
       description?: string | null;
       type: "bug" | "feature";
       status: "new" | "started" | "completed" | "resolved";
+      priority: "low" | "medium" | "high";
       deadline?: string | null;
       project_id: number;
       assigned_to: string;
@@ -461,6 +495,17 @@ export default function BugsPage() {
               <option value="feature">Feature</option>
             </FilterSelect>
 
+            <FilterSelect
+              value={priorityFilter}
+              onChange={setPriorityFilter}
+              label="Priority"
+            >
+              <option value="">All</option>
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </FilterSelect>
+
             <div className="ml-auto flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
               <button
                 onClick={() => setViewMode("cards")}
@@ -520,6 +565,10 @@ export default function BugsPage() {
                       </th>
 
                       <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Priority
+                      </th>
+
+                      <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                         Due Date
                       </th>
 
@@ -547,6 +596,7 @@ export default function BugsPage() {
                     ) : (
                       paginatedBugs.map((bug) => {
                         const s = getStatusStyle(bug.status);
+                        const p = getPriorityStyle(bug.priority);
                         return (
                           <tr
                             key={bug.id}
@@ -572,6 +622,14 @@ export default function BugsPage() {
                                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${s.badge} ${s.text}`}
                               >
                                 {bug.status}
+                              </span>
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${p.badge} ${p.text}`}
+                              >
+                                {bug.priority}
                               </span>
                             </td>
 

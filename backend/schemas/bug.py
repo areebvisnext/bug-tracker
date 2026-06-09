@@ -9,6 +9,7 @@ class BugCreate(BaseModel):
     description: str | None = None
     type: Literal["bug", "feature"]
     status: Literal["new", "started", "completed", "resolved"]
+    priority: Literal["low", "medium", "high"]
     deadline: datetime | None = None
     screenshot: str | None = None
     project_id: int
@@ -22,6 +23,7 @@ class BugResponse(BaseModel):
     description: str | None = None
     type: Literal["bug", "feature"]
     status: Literal["new", "started", "completed", "resolved"]
+    priority: Literal["low", "medium", "high"]
     deadline: datetime | None = None
     screenshot: str | None = None
     project_id: int
@@ -36,6 +38,7 @@ class BugUpdate(BaseModel):
     description: str | None = None
     type: Literal["bug", "feature"] | None = None
     status: Literal["new", "started", "completed", "resolved"] | None = None
+    priority: Literal["low", "medium", "high"] | None = None
     deadline: datetime | None = None
     screenshot: str | None = None
     project_id: int | None = None

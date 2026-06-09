@@ -39,6 +39,7 @@ export default function CreateBugModal({
   const [description, setDescription] = useState("");
   const [bugType, setBugType] = useState<"bug" | "feature">("bug");
   const [status, setStatus] = useState<BugResponse["status"]>("new");
+  const [priority, setPriority] = useState<BugResponse["priority"]>("medium");
   const [deadline, setDeadline] = useState("");
 
   const [assignedTo, setAssignedTo] = useState<string>(devs?.[0]?.id ?? "");
@@ -102,6 +103,7 @@ export default function CreateBugModal({
           description: description || null,
           type: bugType,
           status,
+          priority,
           deadline: deadline || null,
           project_id: projectId,
           assigned_to: assignedTo,

@@ -57,6 +57,7 @@ export type BugResponse = {
   description: string | null;
   type: "bug" | "feature";
   status: "new" | "started" | "completed" | "resolved";
+  priority: "low" | "medium" | "high";
   deadline: string | null;
   screenshot?: string | null;
   project_id: number;
@@ -70,6 +71,7 @@ export type BugPayload = {
   description?: string | null;
   type: "bug" | "feature";
   status: "new" | "started" | "completed" | "resolved";
+  priority: "low" | "medium" | "high";
   deadline?: string | null;
   project_id: number;
   assigned_to: string;
