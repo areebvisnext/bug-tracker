@@ -9,7 +9,7 @@ from services.bugService import (
     create_bug_service,
     delete_bug_service,
     get_bug_service,
-    get_bugList_service,
+    get_bug_list_service,
     update_bug_service,
     upload_screenshot_service,
 )
@@ -27,15 +27,10 @@ async def create_bug(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     user=Depends(require_qa),
 ):
-    result = create_bug_service(bug, user, credentials.credentials)
+    result = create_bug_service(bug, user)
 
     background_tasks.add_task(
-        assigned_bug,
-        bug.assigned_to,
-        bug.project_id,
-        bug.title,
-        user.full_name,
-        credentials.credentials,
+        assigned_bug, bug.assigned_to, bug.project_id, bug.title, user.full_name
     )
     return result
 
@@ -44,7 +39,7 @@ async def create_bug(
 def get_bugList(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
     user = get_current_user_profile(credentials.credentials)
 
-    return get_bugList_service(user, credentials.credentials)
+    return get_bug_list_service(user)
 
 
 @router.get("/{bug_id}")
@@ -53,7 +48,7 @@ def get_bug(
 ):
     user = get_current_user_profile(credentials.credentials)
 
-    return get_bug_service(bug_id, user, credentials.credentials)
+    return get_bug_service(bug_id, user)
 
 
 @router.delete("/{bug_id}")
@@ -62,8 +57,7 @@ def delete_bug(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     user=Depends(require_qa),
 ):
-
-    return delete_bug_service(bug_id, user, credentials.credentials)
+    return delete_bug_service(bug_id, user)
 
 
 @router.post("/{bug_id}/screenshot")
@@ -88,8 +82,6 @@ async def update_bug(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
     user = get_current_user_profile(credentials.credentials)
-    result = update_bug_service(
-        bug_id, bug, user, credentials.credentials, background_tasks
-    )
+    result = update_bug_service(bug_id, bug, user, background_tasks)
 
     return result

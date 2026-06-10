@@ -2,6 +2,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from supabase_auth.errors import AuthApiError
 
 from schemas.auth import LoginSchema, SignupSchema, UserProfileResponse
 from services.auth_errors import raise_auth_http_exception
@@ -14,7 +15,6 @@ from services.authService import (
     logout_user,
     signup_user,
 )
-from supabase_auth.errors import AuthApiError
 
 
 router = APIRouter()

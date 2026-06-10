@@ -1,7 +1,12 @@
-from fastapi_mail import FastMail, MessageSchema, MessageType
+from fastapi_mail import (
+    FastMail,
+    MessageSchema,
+    MessageType,
+)
 import os
-from typing import cast
+
 from supabase import create_client
+from pydantic import NameEmail
 
 from config import mail_conf
 from database.orm import SessionLocal
@@ -9,71 +14,112 @@ from models.project import Project
 from schemas.auth import UserProfileResponse
 
 
-async def send_notification(recipient, subject: str, body: str):
-    recipients = [recipient]
+def _get_supabase():
+    return create_client(
+        os.environ["SUPABASE_URL"],
+        os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+    )
 
+
+def _get_project_name(project_id: int) -> str:
+    with SessionLocal() as db:
+        project = db.query(Project).filter(Project.id == project_id).first()
+
+        return project.name if project else ""
+
+
+async def send_notification(
+    recipient: str,
+    subject: str,
+    body: str,
+) -> None:
     message = MessageSchema(
         subject=subject,
-        recipients=recipients,
+        recipients=[NameEmail(name="", email=recipient)],
         body=body,
         subtype=MessageType.plain,
     )
-    fm = FastMail(mail_conf)
 
-    await fm.send_message(message)
+    await FastMail(mail_conf).send_message(message)
 
 
-async def added_to_project_mail(recipient, project_name: str | None, adder: str | None):
-    subject: str = f"Added to {project_name}"
-    body: str = (
-        f"This is an automated email to inform you that you have been added to Project: {project_name} by: {adder}"
+async def added_to_project_mail(
+    recipient: str,
+    project_name: str,
+    adder: str,
+) -> None:
+    await send_notification(
+        recipient=recipient,
+        subject=f"Added to {project_name}",
+        body=(
+            "This is an automated email to inform you "
+            f"that you have been added to Project: "
+            f"{project_name} by: {adder}"
+        ),
     )
 
-    result = await send_notification(recipient, subject, body)
-    return result
 
-
-async def assigned_bug_mail(recipient, project_name, bug_name, adder):
-    subject: str = f"Assigned a bug: {bug_name}"
-    body: str = (
-        f"This is an automated email to inform you that you have been assigned to bug: {bug_name} by: {adder} in the project : {project_name}"
+async def assigned_bug_mail(
+    recipient: str,
+    project_name: str,
+    bug_name: str,
+    adder: str,
+) -> None:
+    await send_notification(
+        recipient=recipient,
+        subject=f"Assigned a bug: {bug_name}",
+        body=(
+            "This is an automated email to inform you "
+            f"that you have been assigned to bug: "
+            f"{bug_name} by: {adder} "
+            f"in the project: {project_name}"
+        ),
     )
-
-    result = await send_notification(recipient, subject, body)
-    return result
 
 
 async def added_to_project(
-    user: UserProfileResponse, user_id: str, project_id: int, access_token: str
-):
-    supabase = create_client(
-        os.environ["SUPABASE_URL"],
-        os.environ["SUPABASE_SERVICE_ROLE_KEY"],
-    )
+    user: UserProfileResponse,
+    user_id: str,
+    project_id: int,
+) -> dict:
+    supabase = _get_supabase()
 
     response = supabase.auth.admin.get_user_by_id(user_id)
+
     email = response.user.email
 
-    with SessionLocal() as db:
-        project = db.query(Project).filter(Project.id == project_id).first()
-        project_name = cast(str, project.name) if project else ""
+    if not email:
+        return {"message": "User has no email"}
 
-    result = await added_to_project_mail(email, project_name, user.full_name)
-    return {"message": "mail sent"}
-
-
-async def assigned_bug(user_id, project_id, bug_name, adder, access_token):
-    supabase = create_client(
-        os.environ["SUPABASE_URL"],
-        os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+    await added_to_project_mail(
+        recipient=email,
+        project_name=_get_project_name(project_id),
+        adder=user.full_name,
     )
 
+    return {"message": "Mail sent"}
+
+
+async def assigned_bug(
+    user_id: str,
+    project_id: int,
+    bug_name: str,
+    adder: str,
+) -> dict:
+    supabase = _get_supabase()
+
     response = supabase.auth.admin.get_user_by_id(user_id)
+
     email = response.user.email
 
-    with SessionLocal() as db:
-        project = db.query(Project).filter(Project.id == project_id).first()
-        project_name = project.name if project else ""
+    if not email:
+        return {"message": "User has no email"}
 
-    result = await assigned_bug_mail(email, project_name, bug_name, adder)
-    return {"message": "mail sent"}
+    await assigned_bug_mail(
+        recipient=email,
+        project_name=_get_project_name(project_id),
+        bug_name=bug_name,
+        adder=adder,
+    )
+
+    return {"message": "Mail sent"}

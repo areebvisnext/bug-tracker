@@ -1,13 +1,16 @@
-from datetime import datetime
-from fastapi import HTTPException, BackgroundTasks
-from typing import Any, cast, Literal
 import uuid
 
-from database.supabase import supabase, get_supabase_db
+from fastapi import BackgroundTasks, HTTPException, UploadFile
+
 from database.orm import SessionLocal
+from database.supabase import get_supabase_db
 from models import Bug, ProjectMember
-from schemas.bug import BugCreate, BugResponse, BugUpdate
 from schemas.auth import UserProfileResponse
+from schemas.bug import (
+    BugCreate,
+    BugResponse,
+    BugUpdate,
+)
 from services.authorization import (
     can_access_bug,
     can_access_project,
@@ -17,41 +20,52 @@ from services.mailService import assigned_bug
 
 
 def _bug_model_to_response(bug: Bug) -> BugResponse:
-    return BugResponse(
-        id=cast(int, bug.id),
-        title=cast(str, bug.title),
-        description=cast(str, bug.description),
-        type=cast(Literal["bug", "feature"], bug.type),
-        status=cast(Literal["new", "started", "completed", "resolved"], bug.status),
-        priority=cast(Literal["low", "medium", "high"], bug.priority),
-        deadline=cast(datetime, bug.deadline),
-        screenshot=cast(str, bug.screenshot),
-        project_id=cast(int, bug.project_id),
-        assigned_to=str(bug.assigned_to),
-        created_by=str(bug.created_by),
-        created_at=cast(datetime, bug.created_at),
-    )
+    return BugResponse.model_validate(bug)
 
 
-def create_bug_service(bug: BugCreate, user: UserProfileResponse, access_token: str):
+def _get_bug_or_404(db, bug_id: int) -> Bug:
+    bug = db.query(Bug).filter(Bug.id == bug_id).first()
 
+    if not bug:
+        raise HTTPException(
+            status_code=404,
+            detail="Bug not found",
+        )
+
+    return bug
+
+
+def create_bug_service(
+    bug: BugCreate,
+    user: UserProfileResponse,
+):
     with SessionLocal() as db:
-        if not can_access_project(db, user, bug.project_id):
-            raise HTTPException(status_code=403, detail="Not allowed")
+        can_access_project(
+            db,
+            user,
+            bug.project_id,
+        )
 
         existing_bug = (
             db.query(Bug)
-            .filter(Bug.project_id == bug.project_id, Bug.title == bug.title)
+            .filter(
+                Bug.project_id == bug.project_id,
+                Bug.title == bug.title,
+            )
             .first()
         )
+
         if existing_bug:
             raise HTTPException(
                 status_code=409,
                 detail="A bug with this title already exists in this project",
             )
 
-        if not can_access_project_by_id(db, bug.assigned_to, bug.project_id):
-            raise HTTPException(status_code=403, detail="Not allowed")
+        can_access_project_by_id(
+            db,
+            bug.assigned_to,
+            bug.project_id,
+        )
 
         new_bug = Bug(
             title=bug.title,
@@ -62,16 +76,18 @@ def create_bug_service(bug: BugCreate, user: UserProfileResponse, access_token: 
             deadline=bug.deadline,
             screenshot=bug.screenshot,
             project_id=bug.project_id,
-            assigned_to=bug.assigned_to if bug.assigned_to else None,
+            assigned_to=bug.assigned_to or None,
             created_by=user.id,
         )
+
         db.add(new_bug)
         db.commit()
         db.refresh(new_bug)
+
         return _bug_model_to_response(new_bug)
 
 
-def get_bugList_service(user: UserProfileResponse, access_token: str):
+def get_bug_list_service(user: UserProfileResponse):
     with SessionLocal() as db:
         project_ids = [
             pm.project_id
@@ -79,52 +95,85 @@ def get_bugList_service(user: UserProfileResponse, access_token: str):
             .filter(ProjectMember.user_id == user.id)
             .all()
         ]
+
         if not project_ids:
-            raise HTTPException(status_code=404, detail="Not Found")
+            raise HTTPException(
+                status_code=404,
+                detail="Not found",
+            )
 
         bugs = db.query(Bug).filter(Bug.project_id.in_(project_ids)).all()
+
         if not bugs:
-            raise HTTPException(status_code=404, detail="Not Found")
+            raise HTTPException(
+                status_code=404,
+                detail="Not found",
+            )
 
-        return [_bug_model_to_response(b).model_dump() for b in bugs]
+        return [_bug_model_to_response(bug).model_dump() for bug in bugs]
 
 
-def get_bug_service(bug_id: int, user: UserProfileResponse, access_token: str):
+def get_bug_service(
+    bug_id: int,
+    user: UserProfileResponse,
+):
     with SessionLocal() as db:
-        if not can_access_bug(db, bug_id, user.id):
-            raise HTTPException(status_code=403, detail="Not allowed")
+        can_access_bug(
+            db,
+            bug_id,
+            user.id,
+        )
 
-        bug = db.query(Bug).filter(Bug.id == bug_id).first()
-        if not bug:
-            raise HTTPException(status_code=404, detail="Not Found")
+        bug = _get_bug_or_404(
+            db,
+            bug_id,
+        )
 
         return _bug_model_to_response(bug)
 
 
-def delete_bug_service(bug_id: int, user: UserProfileResponse, access_token: str):
+def delete_bug_service(
+    bug_id: int,
+    user: UserProfileResponse,
+):
     with SessionLocal() as db:
-        bug = db.query(Bug).filter(Bug.id == bug_id).first()
-        if not bug:
-            raise HTTPException(status_code=404, detail="Bug does not exist")
+        bug = _get_bug_or_404(
+            db,
+            bug_id,
+        )
 
         if str(bug.created_by) != user.id:
-            raise HTTPException(status_code=403, detail="Not allowed")
+            raise HTTPException(
+                status_code=403,
+                detail="Not allowed",
+            )
 
         db.delete(bug)
         db.commit()
 
-        return {"response": "Deleted succesfully"}
+        return {
+            "message": "Deleted successfully",
+        }
 
 
 async def upload_screenshot_service(
-    bug_id: int, file, user: UserProfileResponse, access_token: str
+    bug_id: int,
+    file: UploadFile,
+    user: UserProfileResponse,
+    access_token: str,
 ) -> dict:
     if user.role != "QA":
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied",
+        )
 
     with SessionLocal() as db:
-        if not can_access_bug(db, bug_id, user.id):
-            raise HTTPException(status_code=403, detail="Access denied")
+        can_access_bug(
+            db,
+            bug_id,
+            user.id,
+        )
 
         allowed_types = {
             "image/png",
@@ -133,7 +182,8 @@ async def upload_screenshot_service(
 
         if file.content_type not in allowed_types:
             raise HTTPException(
-                status_code=400, detail="Only png and gif files are allowed"
+                status_code=400,
+                detail="Only png and gif files are allowed",
             )
 
         contents = await file.read()
@@ -144,30 +194,39 @@ async def upload_screenshot_service(
         storagedb = get_supabase_db(access_token)
 
         storagedb.storage.from_("bug-screenshots").upload(
-            path=path, file=contents, file_options={"content-type": file.content_type}
+            path=path,
+            file=contents,
+            file_options={
+                "content-type": file.content_type,
+            },
         )
 
         url = storagedb.storage.from_("bug-screenshots").get_public_url(path)
 
-        bug = db.query(Bug).filter(Bug.id == bug_id).first()
-        if bug:
-            bug.screenshot = cast(str, url)
-            db.commit()
+        bug = _get_bug_or_404(
+            db,
+            bug_id,
+        )
 
-        return {"message": "screenshot uploaded succesfully"}
+        bug.screenshot = url
+        db.commit()
+
+        return {
+            "message": "Screenshot uploaded successfully",
+        }
 
 
 def update_bug_service(
     bug_id: int,
     bug: BugUpdate,
     user: UserProfileResponse,
-    access_token: str,
     background_tasks: BackgroundTasks,
 ):
     with SessionLocal() as db:
-        bug_db = db.query(Bug).filter(Bug.id == bug_id).first()
-        if not bug_db:
-            raise HTTPException(status_code=404, detail="Not found")
+        bug_db = _get_bug_or_404(
+            db,
+            bug_id,
+        )
 
         if bug.title:
             existing_bug = (
@@ -179,6 +238,7 @@ def update_bug_service(
                 )
                 .first()
             )
+
             if existing_bug:
                 raise HTTPException(
                     status_code=409,
@@ -188,23 +248,35 @@ def update_bug_service(
         bug_type = bug.type if bug.type is not None else bug_db.type
 
         valid_status = {
-            "feature": {"new", "started", "completed"},
-            "bug": {"new", "started", "resolved"},
+            "feature": {
+                "new",
+                "started",
+                "completed",
+            },
+            "bug": {
+                "new",
+                "started",
+                "resolved",
+            },
         }
 
         if bug.status and bug.status not in valid_status[bug_type]:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid status '{bug.status}' for type '{bug_type}'",
+                detail=(f"Invalid status '{bug.status}' " f"for type '{bug_type}'"),
             )
 
         if bug.type and bug.type != bug_db.type:
             if not bug.status:
                 bug.status = "new"
+
             elif bug.status not in valid_status[bug.type]:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Status '{bug.status}' is invalid for new type '{bug.type}'",
+                    detail=(
+                        f"Status '{bug.status}' "
+                        f"is invalid for new type '{bug.type}'"
+                    ),
                 )
 
         payload = bug.model_dump(exclude_unset=True)
@@ -214,34 +286,55 @@ def update_bug_service(
 
             for key, value in payload.items():
                 if key != "created_at":
-                    setattr(bug_db, key, value)
+                    setattr(
+                        bug_db,
+                        key,
+                        value,
+                    )
 
             db.commit()
 
-            if payload.get("assigned_to") and old_assigned_to != payload["assigned_to"]:
+            new_assigned_to = payload.get("assigned_to")
+
+            if new_assigned_to and old_assigned_to != new_assigned_to:
                 background_tasks.add_task(
                     assigned_bug,
-                    payload["assigned_to"],
+                    new_assigned_to,
                     bug_db.project_id,
                     bug_db.title,
                     user.full_name,
-                    access_token,
                 )
 
-            return {"message": "Updated Successfully"}
+            return {
+                "message": "Updated successfully",
+            }
 
         if user.role == "Manager":
             if "priority" in payload:
                 bug_db.priority = payload["priority"]
+
                 db.commit()
-                return {"message": "Updated Successfully"}
+
+                return {
+                    "message": "Updated successfully",
+                }
 
         if user.role == "Developer" and str(bug_db.assigned_to) == user.id:
             if "status" not in payload:
-                raise HTTPException(status_code=400, detail="No status to update")
+                raise HTTPException(
+                    status_code=400,
+                    detail="No status to update",
+                )
 
             bug_db.status = payload["status"]
-            db.commit()
-            return {"message": "Updated Successfully"}
 
-        raise HTTPException(status_code=403, detail="Access denied")
+            db.commit()
+
+            return {
+                "message": "Updated successfully",
+            }
+
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied",
+        )
