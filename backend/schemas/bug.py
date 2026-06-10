@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Literal
-from pydantic import BaseModel
+
+from pydantic import BaseModel, ConfigDict
 
 
 class BugCreate(BaseModel):
@@ -17,6 +18,7 @@ class BugCreate(BaseModel):
 
 
 class BugResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     title: str
@@ -27,7 +29,7 @@ class BugResponse(BaseModel):
     deadline: datetime | None = None
     screenshot: str | None = None
     project_id: int
-    assigned_to: str
+    assigned_to: str | None = None
     created_by: str
     created_at: datetime
 

@@ -13,8 +13,6 @@ import {
   CreateProject,
   UpdateProject,
   AddMembersToProject,
-  GetDevs,
-  GetQA,
   GetUsers,
   getCurrentUser,
 } from "@/lib/api";

@@ -21,8 +21,8 @@ import {
   ProjectResponse,
   UploadBugScreenshot,
 } from "@/lib/api";
+
 import { useRouter } from "next/navigation";
-import { getPriority } from "node:os";
 
 type ViewMode = "list" | "cards";
 

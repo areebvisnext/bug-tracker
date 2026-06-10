@@ -25,10 +25,12 @@ export function AuthSplitLayout({
       </div>
 
       <div className="flex min-h-screen flex-1 flex-col">
-        {header && (
+        {header ? (
           <div className="flex justify-end px-6 pt-8 sm:px-10 lg:px-12">
             {header}
           </div>
+        ) : (
+          <></>
         )}
 
         <div className="flex flex-1 items-center justify-center px-6 py-12 sm:px-10">

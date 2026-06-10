@@ -3,7 +3,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from schemas.projects import ProjectCreate, ProjectResponse, ProjectUpdate
-
 from services.authorization import require_manager
 from services.authService import get_current_user_profile
 from services.mailService import added_to_project
@@ -12,7 +11,7 @@ from services.projectService import (
     create_project_service,
     get_project_service,
     get_members_service,
-    list_projects,
+    list_projects_service,
     update_project_service,
     update_project_with_logo_service,
     remove_members_service,
@@ -83,7 +82,7 @@ def get_projects(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
     user = get_current_user_profile(credentials.credentials)
-    return list_projects(user, credentials.credentials)
+    return list_projects_service(user)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
@@ -92,7 +91,7 @@ def get_project(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
     user = get_current_user_profile(credentials.credentials)
-    return get_project_service(project_id, user, credentials.credentials)
+    return get_project_service(project_id, user)
 
 
 @router.put("/{project_id}", response_model=ProjectResponse)
@@ -102,7 +101,7 @@ def update_project(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     user=Depends(require_manager),
 ):
-    return update_project_service(project_id, project, user, credentials.credentials)
+    return update_project_service(project_id, project, user)
 
 
 @router.post("/{project_id}/members")
@@ -113,13 +112,9 @@ async def add_members(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     user=Depends(require_manager),
 ):
-    result = add_members_service(
-        project_id, request.user_id, user, credentials.credentials
-    )
+    result = add_members_service(project_id, request.user_id, user)
 
-    background_tasks.add_task(
-        added_to_project, user, request.user_id, project_id, credentials.credentials
-    )
+    background_tasks.add_task(added_to_project, user, request.user_id, project_id)
 
     return result
 
@@ -132,7 +127,7 @@ def remove_members(
     user=Depends(require_manager),
 ):
 
-    return remove_members_service(project_id, user_id, user, credentials.credentials)
+    return remove_members_service(project_id, user_id, user)
 
 
 @router.get("/{project_id}/members")
@@ -141,4 +136,4 @@ def get_members(
 ):
     user = get_current_user_profile(credentials.credentials)
 
-    return get_members_service(project_id, user, credentials.credentials)
+    return get_members_service(project_id, user)
